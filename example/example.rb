@@ -4,7 +4,7 @@ include Magick
 require 'runx' # TODO
 
 # load ONNX file
-onnx_obj = Runx.new("VGG16.onnx") # TODO
+onnx_obj = Runx::Runx.new("./data/VGG16.onnx") # TODO
 
 CONV1_1_IN_NAME = "140326425860192"
 FC6_OUT_NAME = "140326200777976"
@@ -12,12 +12,7 @@ SOFTMAX_OUT_NAME = "140326200803680"
 
 # load dataset
 imagelist = [
-  "../data/Light_sussex_hen.jpg",
-  "photo/dog.jpg",
-  "photo/formula1.jpg",
-  "photo/laptoppc.jpg",
-  "photo/polarbear.jpg",
-  "photo/vatican.jpg",
+  "./data/Light_sussex_hen.jpg",
 ]
 
 # conditions for inference
@@ -43,7 +38,7 @@ model = onnx_obj.make_model(condition)
 inference_results = model.inference(imageset)
 
 # load category definition
-categories = File.read('../data/synset_words.txt').split("\n")
+categories = File.read('./data/synset_words.txt').split("\n")
 
 TOP_K = 5
 inference_results.zip(imagelist).each do |inference_result, image_filepath|
