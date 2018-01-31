@@ -1,6 +1,6 @@
 require "runx/version"
 require "runx/runx_native"
 
-# module Runx
+module Runx
   # Your code goes here...
-# end
+end
