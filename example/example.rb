@@ -1,10 +1,10 @@
 require 'rmagick'
 include Magick
 
-require 'instant' # TODO
+require 'runx' # TODO
 
 # load ONNX file
-onnx_obj = Instant.new("VGG16.onnx") # TODO
+onnx_obj = Runx.new("VGG16.onnx") # TODO
 
 CONV1_1_IN_NAME = "140326425860192"
 FC6_OUT_NAME = "140326200777976"

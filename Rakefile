@@ -11,8 +11,8 @@ require "rake/extensiontask"
 
 task :build => :compile
 
-Rake::ExtensionTask.new("onnx_instant") do |ext|
-  ext.lib_dir = "lib/onnx_instant"
+Rake::ExtensionTask.new("runx_native") do |ext|
+  ext.lib_dir = "lib/runx"
 end
 
 task :default => [:clobber, :compile, :test]

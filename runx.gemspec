@@ -1,17 +1,17 @@
 
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "onnx_instant/version"
+require "runx/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "onnx_instant"
-  spec.version       = OnnxInstant::VERSION
+  spec.name          = "runx"
+  spec.version       = Runx::VERSION
   spec.authors       = ["Kunihiko MIYOSHI"]
   spec.email         = ["miyoshik@preferred.jp"]
 
   spec.summary       = %q{TODO: Write a short summary, because RubyGems requires one.}
   spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "https://github.com/colspan/onnx-instant-ruby"
+  spec.homepage      = "https://github.com/colspan/onnx-runx-ruby"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
@@ -29,7 +29,7 @@ Gem::Specification.new do |spec|
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
-  spec.extensions    = ["ext/onnx_instant/extconf.rb"]
+  spec.extensions    = ["ext/runx/extconf.rb"]
 
   spec.add_development_dependency "bundler", "~> 1.16"
   spec.add_development_dependency "rake", "~> 10.0"

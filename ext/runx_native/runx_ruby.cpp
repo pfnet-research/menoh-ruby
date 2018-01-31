@@ -1,38 +1,38 @@
 #include <iostream>
 #include <new>
 
-#include "onnx_instant.hpp"
+#include "runx_ruby.hpp"
 
-struct instantONNX {
+struct runx_ruby {
     onnx::ModelProto* onnx;
 };
 
-static instantONNX* getONNX(VALUE self) {
-    instantONNX* p;
-    Data_Get_Struct(self, instantONNX, p);
+static runx_ruby* getONNX(VALUE self) {
+    runx_ruby* p;
+    Data_Get_Struct(self, runx_ruby, p);
     return p;
 }
 
-static void wrap_instant_free(instantONNX* p) {
+static void wrap_instant_free(runx_ruby* p) {
     p->onnx->~ModelProto();
     ruby_xfree(p);
 }
 
 static VALUE wrap_instant_alloc(VALUE klass) {
-    void* p = ruby_xmalloc(sizeof(instantONNX));
+    void* p = ruby_xmalloc(sizeof(runx_ruby));
     return Data_Wrap_Struct(klass, NULL, wrap_instant_free, p);
 }
 
 static VALUE wrap_instant_init(VALUE self, VALUE vfilename) {
     char* filename = StringValuePtr(vfilename);
     // Load ONNX model
-    getONNX(self)->onnx = new onnx::ModelProto(instant::load_onnx(filename));
+    getONNX(self)->onnx = new onnx::ModelProto(runx::load_onnx(filename));
 
     return Qnil;
 }
 
-struct instantModel {
-    instant::model* model;
+struct runxModel {
+    runx::model* model;
     int batch_size;
     int channel_num;
     int width;
@@ -41,13 +41,13 @@ struct instantModel {
     std::vector<std::string>* output_layers;
 };
 
-static instantModel* getModel(VALUE self) {
-    instantModel* p;
-    Data_Get_Struct(self, instantModel, p);
+static runxModel* getModel(VALUE self) {
+    runxModel* p;
+    Data_Get_Struct(self, runxModel, p);
     return p;
 }
 
-static void wrap_model_free(instantModel* p) {
+static void wrap_model_free(runxModel* p) {
     delete p->model;
     delete p->input_layer;
     delete p->output_layers;
@@ -55,7 +55,7 @@ static void wrap_model_free(instantModel* p) {
 }
 
 static VALUE wrap_model_alloc(VALUE klass) {
-    void* p = ruby_xmalloc(sizeof(instantModel));
+    void* p = ruby_xmalloc(sizeof(runxModel));
     return Data_Wrap_Struct(klass, NULL, wrap_model_free, p);
 }
 
@@ -93,9 +93,9 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
 
     std::vector<int> input_dims{batch_size, channel_num, height, width};
 
-    instant::model* model = new instant::model(instant::make_model(
+    runx::model* model = new runx::model(runx::make_model(
       *(getONNX(vonnx)->onnx),
-      {std::make_tuple(*input_layer, instant::dtype_t::float_, input_dims,
+      {std::make_tuple(*input_layer, runx::dtype_t::float_, input_dims,
                        mkldnn::memory::format::nchw)},
       *output_layers));
     getModel(self)->model = model;
@@ -106,7 +106,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
 static VALUE wrap_instant_makeModel(VALUE self, VALUE condition) {
 
     VALUE args[] = {self, condition};
-    VALUE klass = rb_const_get(rb_cObject, rb_intern("InstantModel"));
+    VALUE klass = rb_const_get(rb_cObject, rb_intern("RunxModel"));
     VALUE obj = rb_class_new_instance(2, args, klass);
 
     return obj;
@@ -150,7 +150,7 @@ static VALUE wrap_model_inference(VALUE self, VALUE images) {
         }
     }
     std::copy(image_data.begin(), image_data.end(),
-              instant::fbegin(input_array));
+              runx::fbegin(input_array));
 
     // Run inference
     auto const& output_table = getModel(self)->model->run();
@@ -161,14 +161,14 @@ static VALUE wrap_model_inference(VALUE self, VALUE images) {
         VALUE result_each = rb_hash_new();
         for(auto output_layer : *(getModel(self)->output_layers)) {
             auto const& out_arr =
-              instant::find_value(output_table, output_layer);
+              runx::find_value(output_table, output_layer);
             int unit_num =
-              instant::total_size(out_arr) / getModel(self)->batch_size;
+              runx::total_size(out_arr) / getModel(self)->batch_size;
             // Convert result to Ruby Array
             VALUE result_layer_output = rb_ary_new();
             for(int j = i * unit_num; j < (i + 1) * unit_num; ++j) {
                 rb_ary_push(result_layer_output,
-                            DBL2NUM(instant::fat(out_arr, j)));
+                            DBL2NUM(runx::fat(out_arr, j)));
             }
 
             rb_hash_aset(result_each, rb_str_new2(output_layer.c_str()),
@@ -183,8 +183,14 @@ static VALUE wrap_model_inference(VALUE self, VALUE images) {
 /**
  * will be called when required
  */
-extern "C" void Init_onnx_instant() {
-    VALUE onnx = rb_define_class("Instant", rb_cObject);
+
+VALUE mRunx;
+
+extern "C" void Init_runx_native() {
+
+    mRunx = rb_define_module("Runx");
+
+    VALUE onnx = rb_define_class_under(mRunx, "Runx", rb_cObject);
 
     rb_define_alloc_func(onnx, wrap_instant_alloc);
     rb_define_private_method(onnx, "initialize",
@@ -192,7 +198,7 @@ extern "C" void Init_onnx_instant() {
     rb_define_method(onnx, "make_model",
                      RUBY_METHOD_FUNC(wrap_instant_makeModel), 1);
 
-    VALUE model = rb_define_class("InstantModel", rb_cObject);
+    VALUE model = rb_define_class("RunxModel", rb_cObject);
 
     rb_define_alloc_func(model, wrap_model_alloc);
     rb_define_private_method(model, "initialize",

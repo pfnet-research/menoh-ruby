@@ -1,3 +1,3 @@
-module OnnxInstant
+module Runx
   VERSION = "0.1.0"
 end
