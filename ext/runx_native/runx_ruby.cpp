@@ -4,7 +4,7 @@
 #include "runx_ruby.hpp"
 
 struct runx_ruby {
-    onnx::ModelProto* onnx;
+    runx::model_data* onnx;
 };
 
 static runx_ruby* getONNX(VALUE self) {
@@ -14,7 +14,7 @@ static runx_ruby* getONNX(VALUE self) {
 }
 
 static void wrap_instant_free(runx_ruby* p) {
-    p->onnx->~ModelProto();
+    delete p->onnx;
     ruby_xfree(p);
 }
 
@@ -26,13 +26,13 @@ static VALUE wrap_instant_alloc(VALUE klass) {
 static VALUE wrap_instant_init(VALUE self, VALUE vfilename) {
     char* filename = StringValuePtr(vfilename);
     // Load ONNX model
-    getONNX(self)->onnx = new onnx::ModelProto(runx::load_onnx(filename));
+    getONNX(self)->onnx = new runx::model_data(runx::load_onnx(filename));
 
     return Qnil;
 }
 
 struct runxModel {
-    runx::model* model;
+    runx::model_with_variable_table* model;
     int batch_size;
     int channel_num;
     int width;
@@ -93,11 +93,12 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
 
     std::vector<int> input_dims{batch_size, channel_num, height, width};
 
-    runx::model* model = new runx::model(runx::make_model(
-      *(getONNX(vonnx)->onnx),
-      {std::make_tuple(*input_layer, runx::dtype_t::float_, input_dims,
-                       mkldnn::memory::format::nchw)},
-      *output_layers));
+    runx::model_with_variable_table* model = new runx::model_with_variable_table(
+        {std::make_pair(*input_layer, input_dims)},
+        *output_layers,
+        *(getONNX(vonnx)->onnx),
+        "mkldnn"
+    );
     getModel(self)->model = model;
 
     return Qnil;
@@ -153,7 +154,7 @@ static VALUE wrap_model_inference(VALUE self, VALUE images) {
               runx::fbegin(input_array));
 
     // Run inference
-    auto const& output_table = getModel(self)->model->run();
+    getModel(self)->model->run();
 
     // Get output
     VALUE results = rb_ary_new();
@@ -161,7 +162,7 @@ static VALUE wrap_model_inference(VALUE self, VALUE images) {
         VALUE result_each = rb_hash_new();
         for(auto output_layer : *(getModel(self)->output_layers)) {
             auto const& out_arr =
-              runx::find_value(output_table, output_layer);
+              getModel(self)->model->output(output_layer);
             int unit_num =
               runx::total_size(out_arr) / getModel(self)->batch_size;
             // Convert result to Ruby Array
