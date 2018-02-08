@@ -113,41 +113,23 @@ static VALUE wrap_instant_makeModel(VALUE self, VALUE condition) {
     return obj;
 }
 
-static VALUE wrap_model_inference(VALUE self, VALUE images) {
+static VALUE wrap_model_inference(VALUE self, VALUE batch) {
 
-    int image_num = NUM2INT(rb_funcall(images, rb_intern("length"), 0, NULL));
+    int batch_size = NUM2INT(rb_funcall(batch, rb_intern("length"), 0, NULL));
+    // TODO error check
+    int array_length = getModel(self)->channel_num * getModel(self)->width * getModel(self)->height;
 
     // Copy input image data to model's input array
     auto& input_array =
       getModel(self)->model->input(*(getModel(self)->input_layer));
 
     // Convert RMagick format to instant format
-    std::vector<float> image_data(
-      getModel(self)->batch_size * getModel(self)->channel_num *
-      getModel(self)->width * getModel(self)->height);
-    for(int i; i < image_num; i++) {
-        VALUE image = rb_ary_entry(images, i);
-        VALUE raw_values =
-          rb_funcall(image, rb_intern("export_pixels"), 0, NULL);
-        auto value_num =
-          NUM2INT(rb_funcall(raw_values, rb_intern("length"), 0, NULL));
-        int image_offset = i * getModel(self)->channel_num *
-                           getModel(self)->width * getModel(self)->height;
-        for(int y = 0; y < getModel(self)->height; ++y) {
-            for(int x = 0; x < getModel(self)->width; ++x) {
-                for(int c = 0; c < getModel(self)->channel_num; c++) {
-                    image_data[image_offset +
-                               c * (getModel(self)->width *
-                                    getModel(self)->height) +
-                               y * getModel(self)->width + x] =
-                      static_cast<float>(
-                        NUM2INT(rb_ary_entry(
-                          raw_values, getModel(self)->channel_num *
-                                          (x + y * getModel(self)->height) +
-                                        c)) /
-                        257);
-                }
-            }
+    std::vector<float> image_data(getModel(self)->batch_size * array_length);
+    for(int i; i < getModel(self)->batch_size; i++) {
+        VALUE data = rb_ary_entry(batch, i);
+        int data_offset = i * array_length;
+        for(int j = 0; j < array_length; ++j) {
+            image_data[data_offset + j] = static_cast<float>(NUM2INT(rb_ary_entry(data, j)));
         }
     }
     std::copy(image_data.begin(), image_data.end(),
@@ -205,6 +187,5 @@ extern "C" void Init_runx_native() {
     rb_define_private_method(model, "initialize",
                              RUBY_METHOD_FUNC(wrap_model_init), 2);
 
-    rb_define_method(model, "inference", RUBY_METHOD_FUNC(wrap_model_inference),
-                     1);
+    rb_define_method(model, "inference", RUBY_METHOD_FUNC(wrap_model_inference), 1);
 }
