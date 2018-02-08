@@ -7,7 +7,7 @@ require 'runx' # TODO
 onnx_obj = Runx::Runx.new("./data/VGG16.onnx") # TODO
 
 CONV1_1_IN_NAME = "140326425860192"
-FC6_OUT_NAME = "140326200777976"
+FC6_OUT_NAME = "140326200777584"
 SOFTMAX_OUT_NAME = "140326200803680"
 
 # load dataset
@@ -27,8 +27,10 @@ condition = {
 
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
-  image = Image.read(image_filepath).first
-  image.resize_to_fill(condition[:width], condition[:height])
+  image = Image.read(image_filepath).first.resize_to_fill(condition[:width], condition[:height])
+  "RGB".split('').map do |color|
+    image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix/257 }.to_a
+  end.flatten
 end
 
 # make model for inference under 'condition'

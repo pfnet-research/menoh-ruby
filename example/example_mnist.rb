@@ -35,8 +35,7 @@ condition = {
 
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
-  image = Image.read(image_filepath).first
-  image.resize_to_fill(condition[:width], condition[:height])
+  image = Image.read(image_filepath).first.resize_to_fill(condition[:width], condition[:height])
   image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix/257 }.to_a
 end
 
