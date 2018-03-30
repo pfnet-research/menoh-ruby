@@ -19,18 +19,18 @@ download_file("https://raw.githubusercontent.com/HoldenCaulfieldRye/caffe/master
 download_file("https://upload.wikimedia.org/wikipedia/commons/5/54/Light_sussex_hen.jpg", "./data/Light_sussex_hen.jpg")
 download_file("https://upload.wikimedia.org/wikipedia/commons/f/fd/FoS20162016_0625_151036AA_%2827826100631%29.jpg", "./data/honda_nsx.jpg")
 
+# load dataset
+imagelist = [
+  "./data/Light_sussex_hen.jpg",
+  "./data/honda_nsx.jpg",
+]
+
 # load ONNX file
 onnx_obj = Runx::Runx.new("./data/VGG16.onnx")
 
 CONV1_1_IN_NAME = "140326425860192"
 FC6_OUT_NAME = "140326200777584"
 SOFTMAX_OUT_NAME = "140326200803680"
-
-# load dataset
-imagelist = [
-  "./data/Light_sussex_hen.jpg",
-  "./data/honda_nsx.jpg",
-]
 
 # conditions for inference
 condition = {
@@ -42,16 +42,16 @@ condition = {
   :output_layers => [FC6_OUT_NAME, SOFTMAX_OUT_NAME]
 }
 
+# make model for inference under 'condition'
+model = onnx_obj.make_model(condition)
+
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
   image = Image.read(image_filepath).first.resize_to_fill(condition[:width], condition[:height])
   "RGB".split('').map do |color|
-    image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix/257 }.to_a
+    image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix }.to_a
   end.flatten
 end
-
-# make model for inference under 'condition'
-model = onnx_obj.make_model(condition)
 
 # execute inference
 inference_results = model.inference(imageset)

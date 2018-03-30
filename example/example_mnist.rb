@@ -3,12 +3,6 @@ include Magick
 
 require 'runx'
 
-# load ONNX file
-onnx_obj = Runx::Runx.new("./data/mnist.onnx")
-
-MNIST_IN_NAME = "139900320569040"
-MNIST_OUT_NAME = "139898462888656"
-
 # load dataset
 imagelist = [
   "./data/0.png",
@@ -23,6 +17,12 @@ imagelist = [
   "./data/9.png",
 ]
 
+# load ONNX file
+onnx_obj = Runx::Runx.new("./data/mnist.onnx")
+
+MNIST_IN_NAME = "139900320569040"
+MNIST_OUT_NAME = "139898462888656"
+
 # conditions for inference
 condition = {
   :batch_size => imagelist.length,
@@ -33,14 +33,14 @@ condition = {
   :output_layers => [MNIST_OUT_NAME]
 }
 
+# make model for inference under 'condition'
+model = onnx_obj.make_model(condition)
+
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
   image = Image.read(image_filepath).first.resize_to_fill(condition[:width], condition[:height])
-  image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix/257 }.to_a
+  image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix }.to_a
 end
-
-# make model for inference under 'condition'
-model = onnx_obj.make_model(condition)
 
 # execute inference
 inference_results = model.inference(imageset)
