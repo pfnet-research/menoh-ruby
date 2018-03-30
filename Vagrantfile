@@ -10,6 +10,8 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "shell", inline: <<-SHELL
+    export INSTALL_PREFIX=/usr/local
+    export RUNX_VERSION=0.2.1-alpha
     sudo apt update
     sudo apt install -y gcc g++ cmake cmake-data libopencv-dev 
     sudo apt install -y ruby-dev ruby-rmagick
@@ -24,23 +26,20 @@ Vagrant.configure("2") do |config|
     cd mkl-dnn/scripts && bash ./prepare_mkl.sh && cd ..
     sed -i 's/add_subdirectory(examples)//g' CMakeLists.txt
     sed -i 's/add_subdirectory(tests)//g' CMakeLists.txt
-    mkdir -p build && cd build && cmake .. && make
+    mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make
     sudo make install
 
     # Runx
     cd
-    unzip /vagrant/external/Runx-0.2.1-alpha.zip
-    cd Runx-0.2.1-alpha
+    unzip /vagrant/external/Runx-$RUNX_VERSION.zip
+    cd Runx-$RUNX_VERSION
     sed -i 's/add_subdirectory(example)//g' CMakeLists.txt
     sed -i 's/add_subdirectory(test)//g' CMakeLists.txt
-    mkdir build
-    cd build
-    cmake ..
-    make
+    mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make
     sudo make install
 
     # runx-ruby
-    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+    export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:$LD_LIBRARY_PATH
     cd /vagrant
     rake
     sudo rake install

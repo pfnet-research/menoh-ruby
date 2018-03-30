@@ -4,6 +4,8 @@ MAINTAINER Kunihiko Miyoshi
 LABEL OBJECT="Runx Ruby Extension Reference Environment"
 
 ENV RUNX_VERSION 0.2.1-alpha
+ENV INSTALL_PREFIX /usr/local
+ENV LD_LIBRARY_PATH ${INSTALL_PREFIX}/lib
 
 RUN apt-get update && apt-get install -y \
   git \
@@ -26,7 +28,7 @@ RUN git clone https://github.com/01org/mkl-dnn.git && \
     cd mkl-dnn/scripts && bash ./prepare_mkl.sh && cd .. && \
     sed -i 's/add_subdirectory(examples)//g' CMakeLists.txt && \
     sed -i 's/add_subdirectory(tests)//g' CMakeLists.txt && \
-    mkdir -p build && cd build && cmake .. && make && \
+    mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make && \
     make install
 
 # Runx
@@ -35,11 +37,11 @@ ADD external/Runx-$RUNX_VERSION.zip /opt/
 WORKDIR /opt/
 RUN unzip Runx-$RUNX_VERSION.zip && \
     cd Runx-$RUNX_VERSION && \
-    sed -i 's/add_subdirectory(test)//g' CMakeLists.txt && \
     sed -i 's/add_subdirectory(example)//g' CMakeLists.txt && \
+    sed -i 's/add_subdirectory(test)//g' CMakeLists.txt && \
     mkdir build && \
     cd build && \
-    cmake .. && \
+    cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && \
     make install
 
 # runx-ruby
@@ -47,4 +49,4 @@ RUN gem install rake-compiler
 RUN mkdir /opt/runx-ruby
 ADD . /opt/runx-ruby
 WORKDIR /opt/runx-ruby
-RUN rake && bundle
+RUN rake && rake install
