@@ -1,7 +1,9 @@
 *.gem
 *.rbc
+/.vagrant/
 /.config
 /coverage/
+/external/
 /InstalledFiles
 /pkg/
 /spec/reports/
