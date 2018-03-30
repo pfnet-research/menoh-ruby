@@ -38,5 +38,11 @@ Vagrant.configure("2") do |config|
     cmake ..
     make
     sudo make install
+
+    # runx-ruby
+    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+    cd /vagrant
+    rake
+    sudo rake install
   SHELL
 end
