@@ -125,7 +125,7 @@ static VALUE wrap_model_inference(VALUE self, VALUE batch) {
 
     // Convert RMagick format to instant format
     std::vector<float> image_data(getModel(self)->batch_size * array_length);
-    for(int i; i < getModel(self)->batch_size; i++) {
+    for(int i = 0; i < getModel(self)->batch_size; i++) {
         VALUE data = rb_ary_entry(batch, i);
         int data_offset = i * array_length;
         for(int j = 0; j < array_length; ++j) {
