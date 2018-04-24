@@ -3,7 +3,7 @@ FROM ubuntu:xenial-20180228
 MAINTAINER Kunihiko Miyoshi
 LABEL OBJECT="Runx Ruby Extension Reference Environment"
 
-ENV RUNX_VERSION 0.2.1-alpha
+ENV RUNX_VERSION 0.4.0-alpha
 ENV INSTALL_PREFIX /usr/local
 ENV LD_LIBRARY_PATH ${INSTALL_PREFIX}/lib
 
@@ -46,7 +46,7 @@ RUN unzip Runx-$RUNX_VERSION.zip && \
 
 # runx-ruby
 RUN gem install rake-compiler
-RUN mkdir /opt/runx-ruby
-ADD . /opt/runx-ruby
-WORKDIR /opt/runx-ruby
-RUN rake && rake install
+# RUN mkdir /opt/runx-ruby
+# ADD . /opt/runx-ruby
+# WORKDIR /opt/runx-ruby
+# RUN rake && rake install

@@ -44,7 +44,17 @@ You can develop on docker. For details, please refer to [Dockerfile](Dockerfile)
 ```bash
 $ export IMAGE_VERSION=0.0.0 # please specify version
 $ sudo -E docker build -t runx-ruby:$IMAGE_VERSION `pwd`
-$ sudo -E docker run -it --name runx-ruby-test runx-ruby:$IMAGE_VERSION bash
+$ sudo -E docker run -it --name runx-ruby-test -v $(pwd):/opt/runx-ruby --entrypoint /bin/bash runx-ruby:$IMAGE_VERSION
+＄ cd /opt/runx-ruby
+＄ rake && rake install
+
+```
+
+#### attach after stop
+
+```bash
+sudo docker start runx-ruby-test bash
+sudo docker attach runx-ruby-test
 ```
 
 ### Vagrant
