@@ -11,7 +11,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     export INSTALL_PREFIX=/usr/local
-    export RUNX_VERSION=0.2.1-alpha
+    export RUNX_VERSION=0.4.0-alpha
     sudo apt update
     sudo apt install -y gcc g++ cmake cmake-data libopencv-dev 
     sudo apt install -y ruby-dev ruby-rmagick
