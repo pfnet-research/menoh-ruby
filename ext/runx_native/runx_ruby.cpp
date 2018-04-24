@@ -32,7 +32,7 @@ static VALUE wrap_instant_init(VALUE self, VALUE vfilename) {
 }
 
 struct runxModel {
-    runx::model_with_variable_table* model;
+    runx::model* model;
     int batch_size;
     int channel_num;
     int width;
@@ -93,7 +93,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
 
     std::vector<int> input_dims{batch_size, channel_num, height, width};
 
-    runx::model_with_variable_table* model = new runx::model_with_variable_table(
+    runx::model* model = new runx::model(
         {std::make_pair(*input_layer, input_dims)},
         *output_layers,
         *(getONNX(vonnx)->onnx),
