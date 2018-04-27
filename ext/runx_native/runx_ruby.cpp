@@ -32,12 +32,9 @@ static VALUE wrap_instant_init(VALUE self, VALUE vfilename) {
 }
 
 struct runxModel {
+    runx::model_data* onnx;
     runx::model* model;
-    int batch_size;
-    int channel_num;
-    int width;
-    int height;
-    std::string* input_layer;
+    std::string* backend;
     std::vector<std::string>* output_layers;
 };
 
@@ -49,7 +46,7 @@ static runxModel* getModel(VALUE self) {
 
 static void wrap_model_free(runxModel* p) {
     delete p->model;
-    delete p->input_layer;
+    delete p->backend;
     delete p->output_layers;
     ruby_xfree(p);
 }
@@ -62,22 +59,12 @@ static VALUE wrap_model_alloc(VALUE klass) {
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
 
     // TODO check data type
+    // condition
 
-    // input data conditions
-    int batch_size = getModel(self)->batch_size =
-      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("batch_size"))));
-    int channel_num = getModel(self)->channel_num = NUM2INT(
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("channel_num"))));
-    int height = getModel(self)->height =
-      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("height"))));
-    int width = getModel(self)->width =
-      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("width"))));
-
-    // input_layer
-    VALUE vinput_layer =
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("input_layer")));
-    std::string* input_layer = new std::string(StringValuePtr(vinput_layer));
-    getModel(self)->input_layer = input_layer;
+    getModel(self)->onnx = getONNX(vonnx)->onnx;
+    VALUE vbackend =
+      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("backend")));
+    getModel(self)->backend = new std::string(StringValuePtr(vbackend));
 
     // output_layer
     std::vector<std::string>* output_layers = new std::vector<std::string>;
@@ -91,16 +78,6 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
     }
     getModel(self)->output_layers = output_layers;
 
-    std::vector<int> input_dims{batch_size, channel_num, height, width};
-
-    runx::model* model = new runx::model(
-        {std::make_pair(*input_layer, input_dims)},
-        *output_layers,
-        *(getONNX(vonnx)->onnx),
-        "mkldnn"
-    );
-    getModel(self)->model = model;
-
     return Qnil;
 }
 
@@ -113,19 +90,46 @@ static VALUE wrap_instant_makeModel(VALUE self, VALUE condition) {
     return obj;
 }
 
-static VALUE wrap_model_inference(VALUE self, VALUE batch) {
+static VALUE wrap_model_run(VALUE self, VALUE batch, VALUE condition) {
+
+    // TODO check data type
+    // batch
+    // condition
+
+    // condition
+    int channel_num = NUM2INT(
+      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("channel_num"))));
+    int height =
+      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("height"))));
+    int width =
+      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("width"))));
+
+    // input_layer
+    VALUE vinput_layer =
+      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("input_layer")));
+    std::string* input_layer = new std::string(StringValuePtr(vinput_layer));
 
     int batch_size = NUM2INT(rb_funcall(batch, rb_intern("length"), 0, NULL));
     // TODO error check
-    int array_length = getModel(self)->channel_num * getModel(self)->width * getModel(self)->height;
+    int array_length = channel_num * width * height;
+
+    std::vector<int> input_dims{batch_size, channel_num, height, width};
+
+    runx::model* model = new runx::model(
+        {std::make_pair(*input_layer, input_dims)},
+        *(getModel(self)->output_layers),
+        *(getModel(self)->onnx),
+        *(getModel(self)->backend)
+    );
+    getModel(self)->model = model;
 
     // Copy input image data to model's input array
     auto& input_array =
-      getModel(self)->model->input(*(getModel(self)->input_layer));
+      getModel(self)->model->input(*input_layer);
 
     // Convert RMagick format to instant format
-    std::vector<float> image_data(getModel(self)->batch_size * array_length);
-    for(int i = 0; i < getModel(self)->batch_size; i++) {
+    std::vector<float> image_data(batch_size * array_length);
+    for(int i = 0; i < batch_size; i++) {
         VALUE data = rb_ary_entry(batch, i);
         int data_offset = i * array_length;
         for(int j = 0; j < array_length; ++j) {
@@ -140,13 +144,13 @@ static VALUE wrap_model_inference(VALUE self, VALUE batch) {
 
     // Get output
     VALUE results = rb_ary_new();
-    for(int i = 0; i < getModel(self)->batch_size; i++) {
+    for(int i = 0; i < batch_size; i++) {
         VALUE result_each = rb_hash_new();
         for(auto output_layer : *(getModel(self)->output_layers)) {
             auto const& out_arr =
               getModel(self)->model->output(output_layer);
             int unit_num =
-              runx::total_size(out_arr) / getModel(self)->batch_size;
+              runx::total_size(out_arr) / batch_size;
             // Convert result to Ruby Array
             VALUE result_layer_output = rb_ary_new();
             for(int j = i * unit_num; j < (i + 1) * unit_num; ++j) {
@@ -187,5 +191,5 @@ extern "C" void Init_runx_native() {
     rb_define_private_method(model, "initialize",
                              RUBY_METHOD_FUNC(wrap_model_init), 2);
 
-    rb_define_method(model, "inference", RUBY_METHOD_FUNC(wrap_model_inference), 1);
+    rb_define_method(model, "run", RUBY_METHOD_FUNC(wrap_model_run), 2);
 }

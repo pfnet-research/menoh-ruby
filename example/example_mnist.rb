@@ -24,26 +24,28 @@ MNIST_IN_NAME = "139900320569040"
 MNIST_OUT_NAME = "139898462888656"
 
 # conditions for inference
-condition = {
-  :batch_size => imagelist.length,
+model_condition = {
+  :output_layers => [MNIST_OUT_NAME],
+  :backend => 'mkldnn',
+}
+input_condition = {
   :channel_num => 1,
   :height => 28,
   :width => 28,
   :input_layer => MNIST_IN_NAME,
-  :output_layers => [MNIST_OUT_NAME]
 }
 
 # make model for inference under 'condition'
-model = onnx_obj.make_model(condition)
+model = onnx_obj.make_model(model_condition)
 
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
-  image = Image.read(image_filepath).first.resize_to_fill(condition[:width], condition[:height])
+  image = Image.read(image_filepath).first.resize_to_fill(input_condition[:width], input_condition[:height])
   image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix }.to_a
 end
 
 # execute inference
-inference_results = model.inference(imageset)
+inference_results = model.run(imageset, input_condition)
 
 categories = (0..9).to_a
 TOP_K = 1
