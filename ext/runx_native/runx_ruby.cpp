@@ -158,8 +158,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     }
     catch (std::exception& e) {
         delete input_layer;
-        std::cerr << e.what() << std::endl;
-        rb_raise(rb_eTypeError, "Runx runtime error");
+        rb_raise(rb_eTypeError, "%s", e.what());
         return Qnil;
     }
 }
