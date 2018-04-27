@@ -13,17 +13,17 @@ static runx_ruby* getONNX(VALUE self) {
     return p;
 }
 
-static void wrap_instant_free(runx_ruby* p) {
+static void wrap_runx_free(runx_ruby* p) {
     delete p->onnx;
     ruby_xfree(p);
 }
 
-static VALUE wrap_instant_alloc(VALUE klass) {
+static VALUE wrap_runx_alloc(VALUE klass) {
     void* p = ruby_xmalloc(sizeof(runx_ruby));
-    return Data_Wrap_Struct(klass, NULL, wrap_instant_free, p);
+    return Data_Wrap_Struct(klass, NULL, wrap_runx_free, p);
 }
 
-static VALUE wrap_instant_init(VALUE self, VALUE vfilename) {
+static VALUE wrap_runx_init(VALUE self, VALUE vfilename) {
     char* filename = StringValuePtr(vfilename);
     // Load ONNX model
     getONNX(self)->onnx = new runx::model_data(runx::load_onnx(filename));
@@ -58,9 +58,7 @@ static VALUE wrap_model_alloc(VALUE klass) {
 
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
 
-    // TODO check data type
     // condition
-
     getModel(self)->onnx = getONNX(vonnx)->onnx;
     VALUE vbackend =
       rb_hash_aref(condition, rb_to_symbol(rb_str_new2("backend")));
@@ -81,20 +79,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
     return Qnil;
 }
 
-static VALUE wrap_instant_makeModel(VALUE self, VALUE condition) {
-
-    VALUE args[] = {self, condition};
-    VALUE klass = rb_const_get(rb_cObject, rb_intern("RunxModel"));
-    VALUE obj = rb_class_new_instance(2, args, klass);
-
-    return obj;
-}
-
 static VALUE wrap_model_run(VALUE self, VALUE batch, VALUE condition) {
-
-    // TODO check data type
-    // batch
-    // condition
 
     // condition
     int channel_num = NUM2INT(
@@ -110,7 +95,6 @@ static VALUE wrap_model_run(VALUE self, VALUE batch, VALUE condition) {
     std::string* input_layer = new std::string(StringValuePtr(vinput_layer));
 
     int batch_size = NUM2INT(rb_funcall(batch, rb_intern("length"), 0, NULL));
-    // TODO error check
     int array_length = channel_num * width * height;
 
     std::vector<int> input_dims{batch_size, channel_num, height, width};
@@ -179,17 +163,15 @@ extern "C" void Init_runx_native() {
 
     VALUE onnx = rb_define_class_under(mRunx, "Runx", rb_cObject);
 
-    rb_define_alloc_func(onnx, wrap_instant_alloc);
-    rb_define_private_method(onnx, "initialize",
-                             RUBY_METHOD_FUNC(wrap_instant_init), 1);
-    rb_define_method(onnx, "make_model",
-                     RUBY_METHOD_FUNC(wrap_instant_makeModel), 1);
+    rb_define_alloc_func(onnx, wrap_runx_alloc);
+    rb_define_private_method(onnx, "native_init",
+                             RUBY_METHOD_FUNC(wrap_runx_init), 1);
 
-    VALUE model = rb_define_class("RunxModel", rb_cObject);
+    VALUE model = rb_define_class_under(mRunx, "RunxModel", rb_cObject);
 
     rb_define_alloc_func(model, wrap_model_alloc);
-    rb_define_private_method(model, "initialize",
+    rb_define_private_method(model, "native_init",
                              RUBY_METHOD_FUNC(wrap_model_init), 2);
 
-    rb_define_method(model, "run", RUBY_METHOD_FUNC(wrap_model_run), 2);
+    rb_define_private_method(model, "native_run", RUBY_METHOD_FUNC(wrap_model_run), 2);
 }
