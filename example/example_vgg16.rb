@@ -32,29 +32,31 @@ CONV1_1_IN_NAME = "140326425860192"
 FC6_OUT_NAME = "140326200777584"
 SOFTMAX_OUT_NAME = "140326200803680"
 
-# conditions for inference
-condition = {
-  :batch_size => imagelist.length,
+# conditions for model
+model_condition = {
+  :output_layers => [FC6_OUT_NAME, SOFTMAX_OUT_NAME],
+  :backend => "mkldnn",
+}
+# make model for inference under 'condition'
+model = onnx_obj.make_model(model_condition)
+
+# conditions for input
+input_condition = {
   :channel_num => 3,
   :height => 224,
   :width => 224,
   :input_layer => CONV1_1_IN_NAME,
-  :output_layers => [FC6_OUT_NAME, SOFTMAX_OUT_NAME]
 }
-
-# make model for inference under 'condition'
-model = onnx_obj.make_model(condition)
-
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
-  image = Image.read(image_filepath).first.resize_to_fill(condition[:width], condition[:height])
+  image = Image.read(image_filepath).first.resize_to_fill(input_condition[:width], input_condition[:height])
   "RGB".split('').map do |color|
-    image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix }.to_a
+    image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix/256 }
   end.flatten
 end
 
 # execute inference
-inference_results = model.inference(imageset)
+inference_results = model.run(imageset, input_condition)
 
 # load category definition
 categories = File.read('./data/synset_words.txt').split("\n")

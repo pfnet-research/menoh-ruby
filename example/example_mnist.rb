@@ -23,27 +23,26 @@ onnx_obj = Runx::Runx.new("./data/mnist.onnx")
 MNIST_IN_NAME = "139900320569040"
 MNIST_OUT_NAME = "139898462888656"
 
-# conditions for inference
+# conditions for model
 model_condition = {
   :output_layers => [MNIST_OUT_NAME],
   :backend => 'mkldnn',
 }
+# make model for inference under 'model_condition'
+model = onnx_obj.make_model(model_condition)
+
+# conditions for input
 input_condition = {
   :channel_num => 1,
   :height => 28,
   :width => 28,
   :input_layer => MNIST_IN_NAME,
 }
-
-# make model for inference under 'condition'
-model = onnx_obj.make_model(model_condition)
-
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
   image = Image.read(image_filepath).first.resize_to_fill(input_condition[:width], input_condition[:height])
-  image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix }.to_a
+  image.export_pixels(0, 0, image.columns, image.rows, 'i').map{|pix| pix/256}
 end
-
 # execute inference
 inference_results = model.run(imageset, input_condition)
 
@@ -52,7 +51,6 @@ TOP_K = 1
 inference_results.zip(imagelist).each do |inference_result, image_filepath|
   # sort by score
   sorted_result = inference_result[MNIST_OUT_NAME].zip(categories).sort_by{|x| -x[0]}
-
 
   # display result
   sorted_result[0, TOP_K].each do |score, category|
