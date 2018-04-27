@@ -5,7 +5,7 @@ module Runx
   class Runx
     def initialize file
       if not file.instance_of?(String) or not File.exist?(file)
-        raise "No such file #{file}"
+        raise "No such file : #{file}"
       end
 
       native_init file
@@ -22,7 +22,7 @@ module Runx
         raise "Invalid ':output_layers'" 
       end
       # TODO no such layer
-      if condition[:backend] == nil or condition[:backend] != 'mkldnn'
+      if condition[:backend] == nil or condition[:backend] != "mkldnn"
         raise "Invalid ':backend' : #{condition[:backend]}"
       end
       RunxModel.new self, condition
@@ -49,6 +49,7 @@ module Runx
       if not condition[:input_layer].instance_of?(String)
         raise "Invalid ':input_layer'" 
       end
+      # TODO no such layer      
       if not condition[:channel_num].instance_of?(Fixnum)
         raise "Invalid ':channel_num'" 
       end

@@ -79,7 +79,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
     return Qnil;
 }
 
-static VALUE wrap_model_run(VALUE self, VALUE batch, VALUE condition) {
+static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
 
     // condition
     int channel_num = NUM2INT(
@@ -94,7 +94,7 @@ static VALUE wrap_model_run(VALUE self, VALUE batch, VALUE condition) {
       rb_hash_aref(condition, rb_to_symbol(rb_str_new2("input_layer")));
     std::string* input_layer = new std::string(StringValuePtr(vinput_layer));
 
-    int batch_size = NUM2INT(rb_funcall(batch, rb_intern("length"), 0, NULL));
+    int batch_size = NUM2INT(rb_funcall(dataset, rb_intern("length"), 0, NULL));
     int array_length = channel_num * width * height;
 
     std::vector<int> input_dims{batch_size, channel_num, height, width};
@@ -107,32 +107,31 @@ static VALUE wrap_model_run(VALUE self, VALUE batch, VALUE condition) {
     );
     getModel(self)->model = model;
 
-    // Copy input image data to model's input array
-    auto& input_array =
-      getModel(self)->model->input(*input_layer);
-
-    // Convert RMagick format to instant format
+    // Flatten and cast Array for Runx
     std::vector<float> image_data(batch_size * array_length);
     for(int i = 0; i < batch_size; i++) {
-        VALUE data = rb_ary_entry(batch, i);
+        VALUE data = rb_ary_entry(dataset, i);
         int data_offset = i * array_length;
         for(int j = 0; j < array_length; ++j) {
-            image_data[data_offset + j] = static_cast<float>(NUM2INT(rb_ary_entry(data, j)));
+            image_data[data_offset + j] = static_cast<float>(NUM2DBL(rb_ary_entry(data, j)));
         }
     }
+
+    // Copy input image data to model's input array
+    auto& input_array =
+      model->input(*input_layer);
     std::copy(image_data.begin(), image_data.end(),
               runx::fbegin(input_array));
 
     // Run inference
-    getModel(self)->model->run();
+    model->run();
 
     // Get output
     VALUE results = rb_ary_new();
     for(int i = 0; i < batch_size; i++) {
         VALUE result_each = rb_hash_new();
         for(auto output_layer : *(getModel(self)->output_layers)) {
-            auto const& out_arr =
-              getModel(self)->model->output(output_layer);
+            auto const& out_arr = model->output(output_layer);
             int unit_num =
               runx::total_size(out_arr) / batch_size;
             // Convert result to Ruby Array
