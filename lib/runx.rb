@@ -46,18 +46,24 @@ module Runx
       if not dataset.instance_of?(Array) or dataset.length == 0
         raise "Invalid dataset" 
       end
-      if not condition[:input_layer].instance_of?(String)
+      if not condition[:input_layer].instance_of?(String) or condition[:input_layer].length == 0
         raise "Invalid ':input_layer'" 
       end
       # TODO no such layer      
-      if not condition[:channel_num].instance_of?(Fixnum)
+      if not condition[:channel_num].instance_of?(Fixnum) or condition[:channel_num] <= 0
         raise "Invalid ':channel_num'" 
       end
-      if not condition[:width].instance_of?(Fixnum)
+      if not condition[:width].instance_of?(Fixnum) or condition[:width] <= 0
         raise "Invalid ':width'" 
       end
-      if not condition[:height].instance_of?(Fixnum)
+      if not condition[:height].instance_of?(Fixnum) or condition[:height] <= 0
         raise "Invalid ':height'" 
+      end
+      expected_data_length = condition[:channel_num] * condition[:width] * condition[:height]
+      dataset.each do |data|
+        if data.length != expected_data_length
+          raise "Invalid data length: expected==#{expected_data_length} actual==#{data.length}"
+        end
       end
       native_run dataset, condition
     end
