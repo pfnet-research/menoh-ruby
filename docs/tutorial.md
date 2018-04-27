@@ -39,9 +39,9 @@ model_condition = {
 model = onnx_obj.make_model(model_condition)
 ```
 
-## Preprocessing input
+## Preprocessing dataset
 
-First of all, preprocessing input is required. `data/VGG16.onnx` takes 3 channels 224 x 224 sized image but input image is not always sized 224x224. So we use Imagemagick's `resize_to_fill` method for resizing.
+Before running the inference, the preprocessing of input dataset is required. `data/VGG16.onnx` takes 3 channels 224 x 224 sized image but input image is not always sized 224x224. So we use Imagemagick's `resize_to_fill` method for resizing.
 
 Runx takes images as NCHW format (N x Channels x Height x Width), but `Mat` of OpenCV holds image as HWC format (Height x Width x Channels). In addition, `data/VGG16.onnx` takes RGB image but `Mat` holds image as BGR format. So next we call `export_pixels` method for each channels `["R", "G", "B"]`, then `flatten` arrays.
 
@@ -78,9 +78,9 @@ imageset = imagelist.map do |image_filepath|
 end
 ```
 
-## Run inference and get result
+## Run inference and get results
 
-Now we can run inference.
+Now we can run the inference.
 
 ```ruby
 # execute inference
