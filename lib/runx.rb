@@ -50,13 +50,13 @@ module Runx
         raise "Invalid ':input_layer'" 
       end
       # TODO no such layer      
-      if not condition[:channel_num].instance_of?(Fixnum) or condition[:channel_num] <= 0
+      if not condition[:channel_num].integer? or condition[:channel_num] <= 0
         raise "Invalid ':channel_num'" 
       end
-      if not condition[:width].instance_of?(Fixnum) or condition[:width] <= 0
+      if not condition[:width].integer? or condition[:width] <= 0
         raise "Invalid ':width'" 
       end
-      if not condition[:height].instance_of?(Fixnum) or condition[:height] <= 0
+      if not condition[:height].integer? or condition[:height] <= 0
         raise "Invalid ':height'" 
       end
       expected_data_length = condition[:channel_num] * condition[:width] * condition[:height]

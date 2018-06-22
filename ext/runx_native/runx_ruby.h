@@ -2,8 +2,7 @@
 #define RUNX_H 1
 
 #include <ruby.h>
-#include <runx/model.hpp>
-#include <runx/runx.hpp>
+#include <menoh/menoh.h>
 
 
 #endif /* RUNX_H */
