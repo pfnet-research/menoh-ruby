@@ -48,6 +48,8 @@ static VALUE wrap_runx_init(VALUE self, VALUE vfilename) {
 typedef struct runxModel {
   menoh_model_data_handle model_data;
   VALUE vbackend;
+  float *input_buff;
+  float **output_buffs;
 } runxModel;
 
 static runxModel *getModel(VALUE self) {
@@ -58,6 +60,10 @@ static runxModel *getModel(VALUE self) {
 
 static void wrap_model_free(runxModel *p) {
   if (p) {
+    if (p->input_buff)
+      free(p->input_buff);
+    if (p->output_buffs)
+      free(p->output_buffs);
     ruby_xfree(p);
   }
 }
@@ -83,6 +89,7 @@ static VALUE wrap_model_prepare(VALUE self, VALUE vbatchsize, VALUE condition) {
 }
 
 static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
+  VALUE ret_value = Qnil;
 
   // condition
   int32_t channel_num = NUM2INT(
@@ -109,8 +116,8 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
               rb_eStandardError);
 
   // set output_layer
-  int32_t output_layer_num = NUM2INT(
-      rb_funcall(voutput_layers, rb_intern("length"), 0, NULL));
+  int32_t output_layer_num =
+      NUM2INT(rb_funcall(voutput_layers, rb_intern("length"), 0, NULL));
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     ERROR_CHECK(
@@ -143,11 +150,12 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
               rb_eStandardError);
 
   // attach input buffer to model builder
-  float *input_buff;
-  input_buff = (float *)malloc(sizeof(float) * batch_size * channel_num *
-                               width * height);
+  getModel(self)->input_buff = (float *)malloc(sizeof(float) * batch_size *
+                                               channel_num * width * height);
+
   ERROR_CHECK(menoh_model_builder_attach_external_buffer(
-                  model_builder, StringValuePtr(vinput_layer), input_buff),
+                  model_builder, StringValuePtr(vinput_layer),
+                  getModel(self)->input_buff),
               rb_eStandardError);
 
   // build model
@@ -161,13 +169,13 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     VALUE data = rb_ary_entry(dataset, i);
     int32_t data_offset = i * array_length;
     for (int32_t j = 0; j < array_length; ++j) {
-      input_buff[data_offset + j] = (float)(NUM2DBL(rb_ary_entry(data, j)));
+      getModel(self)->input_buff[data_offset + j] =
+          (float)(NUM2DBL(rb_ary_entry(data, j)));
     }
   }
 
   // attach output buffer to model
-  float **output_buffs;
-  output_buffs = (float **)malloc(sizeof(float *) * output_layer_num);
+  getModel(self)->output_buffs = (float **)malloc(sizeof(float *) * output_layer_num);
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     float *output_buff;
@@ -175,7 +183,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
         menoh_model_get_variable_buffer_handle(
             model, StringValuePtr(voutput_layer), (void **)&output_buff),
         rb_eStandardError);
-    output_buffs[i] = output_buff;
+    getModel(self)->output_buffs[i] = output_buff;
   }
 
   // run model
@@ -185,8 +193,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
   VALUE results = rb_ary_new();
   for (int32_t output_layer_i = 0; output_layer_i < output_layer_num;
        output_layer_i++) {
-    VALUE voutput_layer =
-        rb_ary_entry(voutput_layers, output_layer_i);
+    VALUE voutput_layer = rb_ary_entry(voutput_layers, output_layer_i);
     VALUE result_each = rb_hash_new();
 
     // get dimention of output layers
@@ -212,7 +219,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     VALUE vresult_buffer = rb_ary_new();
     for (int32_t j = 0; j < output_buffer_length; j++) {
       float *output_buff;
-      output_buff = output_buffs[output_layer_i];
+      output_buff = getModel(self)->output_buffs[output_layer_i];
       rb_ary_push(vresult_buffer, DBL2NUM(*(output_buff + j)));
     }
 
@@ -224,14 +231,12 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     rb_ary_push(results, result_each);
   }
 
-  // TODO error
+  ret_value = results;
 
+  // TODO error
   menoh_delete_model(model);
   menoh_delete_model_builder(model_builder);
   menoh_delete_variable_profile_table_builder(vpt_builder);
-
-  free(input_buff);
-  free(output_buffs);
 
   return results;
 }
