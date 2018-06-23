@@ -204,7 +204,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition)
 
         // get dimention of output layers
         int32_t dim_size;
-        int32_t output_buffer_length = batch_size;
+        int32_t output_buffer_length = 1;
         ERROR_CHECK(menoh_variable_profile_table_get_dims_size(
                         variable_profile_table, StringValuePtr(voutput_layer), &(dim_size)),
                     rb_eStandardError);
@@ -217,7 +217,6 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition)
                             variable_profile_table, StringValuePtr(voutput_layer), dim, &(size)),
                         rb_eStandardError);
             rb_ary_push(vresult_shape, INT2NUM(size));
-            printf("%d\n", size);
             output_buffer_length *= size;
         }
 

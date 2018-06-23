@@ -30,7 +30,17 @@ module Runx
   end
 end
 
+def transpose buffer, shape
+  sliced_buffer = buffer.each_slice( buffer.length / shape[0] ).to_a
+  if shape.length > 2
+    next_shape = shape.slice(1, a.length)
+    sliced_buffer = sliced_buffer.map { |buf| transpose buf }
+  end
+  sliced_buffer
+end
+
 module Runx
+
   class RunxModel
     def initialize runx, condition
       # TODO check condition
@@ -62,15 +72,32 @@ module Runx
         raise "Invalid option : #{:input_layer.to_s}" 
       end
 
-      # TODO no such layer      
       expected_data_length = condition[:channel_num] * condition[:width] * condition[:height]
       dataset.each do |data|
         if data.length != expected_data_length
           raise "Invalid data length: expected==#{expected_data_length} actual==#{data.length}"
         end
       end
-      a = native_run dataset, condition
-      p a
+
+      # run
+      raw_results = native_run dataset, condition
+
+      # reshape result
+      raw_results.map do |raw|
+        buffer = raw[:buffer]
+        shape = raw[:shape]  
+        raw[:buffer] = transpose buffer, shape
+      end
+      results = []
+      output_layers = raw_results.map { |result| result[:name] }
+      dataset.length.times do |i|
+        result = {}
+        raw_results.each do |raw|
+          result[raw[:name]] = raw[:buffer][i]
+        end
+        results << result
+      end
+      results
     end
   end
 end
