@@ -31,7 +31,7 @@ def transpose(buffer, shape)
   sliced_buffer = buffer.each_slice(buffer.length / shape[0]).to_a
   if shape.length > 2
     next_shape = shape.slice(1, a.length)
-    sliced_buffer = sliced_buffer.map { |buf| transpose buf }
+    sliced_buffer = sliced_buffer.map { |buf| transpose buf, next_shape }
   end
   sliced_buffer
 end
