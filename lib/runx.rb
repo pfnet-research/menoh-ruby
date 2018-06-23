@@ -19,10 +19,6 @@ module Runx
     end
 
     def make_model(condition)
-      if condition[:output_layers].nil? || condition[:output_layers].empty?
-        raise "Invalid ':output_layers'"
-      end
-      # TODO: no such layer
       if condition[:backend].nil? || (condition[:backend] != 'mkldnn')
         raise "Invalid ':backend' : #{condition[:backend]}"
       end
@@ -43,7 +39,6 @@ end
 module Runx
   class RunxModel
     def initialize(runx, condition)
-      # TODO: check condition
       native_init runx, condition
       if block_given?
         begin
@@ -63,6 +58,9 @@ module Runx
       raise 'Required : input_layer' if condition[:input_layer].nil?
       if !condition[:input_layer].instance_of?(String) || condition[:input_layer].empty?
         raise 'Invalid option : input_layer'
+      end
+      if condition[:output_layers].nil? || condition[:output_layers].empty?
+        raise "Invalid ':output_layers'"
       end
 
       expected_data_length = condition[:channel_num] * condition[:width] * condition[:height]

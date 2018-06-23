@@ -48,7 +48,6 @@ static VALUE wrap_runx_init(VALUE self, VALUE vfilename) {
 typedef struct runxModel {
   menoh_model_data_handle model_data;
   VALUE vbackend;
-  VALUE voutput_layers;
 } runxModel;
 
 static runxModel *getModel(VALUE self) {
@@ -77,11 +76,6 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
       rb_hash_aref(condition, rb_to_symbol(rb_str_new2("backend")));
   getModel(self)->vbackend = vbackend;
 
-  // output_layer
-  VALUE voutput_layers =
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("output_layers")));
-  getModel(self)->voutput_layers = voutput_layers;
-
   return Qnil;
 }
 
@@ -105,7 +99,8 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
   VALUE vbackend = getModel(self)->vbackend;
   VALUE vinput_layer =
       rb_hash_aref(condition, rb_to_symbol(rb_str_new2("input_layer")));
-  VALUE voutput_layers = getModel(self)->voutput_layers;
+  VALUE voutput_layers =
+      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("output_layers")));
 
   //////////////////////////
   // get vpt builder
@@ -115,9 +110,9 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
 
   // set output_layer
   int32_t output_layer_num = NUM2INT(
-      rb_funcall(getModel(self)->voutput_layers, rb_intern("length"), 0, NULL));
+      rb_funcall(voutput_layers, rb_intern("length"), 0, NULL));
   for (int32_t i = 0; i < output_layer_num; i++) {
-    VALUE voutput_layer = rb_ary_entry(getModel(self)->voutput_layers, i);
+    VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     ERROR_CHECK(
         menoh_variable_profile_table_builder_add_output_profile(
             vpt_builder, StringValuePtr(voutput_layer), menoh_dtype_float),
@@ -174,7 +169,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
   float **output_buffs;
   output_buffs = (float **)malloc(sizeof(float *) * output_layer_num);
   for (int32_t i = 0; i < output_layer_num; i++) {
-    VALUE voutput_layer = rb_ary_entry(getModel(self)->voutput_layers, i);
+    VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     float *output_buff;
     ERROR_CHECK(
         menoh_model_get_variable_buffer_handle(
@@ -191,7 +186,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
   for (int32_t output_layer_i = 0; output_layer_i < output_layer_num;
        output_layer_i++) {
     VALUE voutput_layer =
-        rb_ary_entry(getModel(self)->voutput_layers, output_layer_i);
+        rb_ary_entry(voutput_layers, output_layer_i);
     VALUE result_each = rb_hash_new();
 
     // get dimention of output layers

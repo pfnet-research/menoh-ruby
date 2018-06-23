@@ -34,7 +34,6 @@ SOFTMAX_OUT_NAME = '140326200803680'.freeze
 
 # conditions for model
 model_condition = {
-  output_layers: [FC6_OUT_NAME, SOFTMAX_OUT_NAME],
   backend: 'mkldnn'
 }
 # make model for inference under 'condition'
@@ -45,7 +44,8 @@ input_condition = {
   channel_num: 3,
   height: 224,
   width: 224,
-  input_layer: CONV1_1_IN_NAME
+  input_layer: CONV1_1_IN_NAME,
+  output_layers: [FC6_OUT_NAME, SOFTMAX_OUT_NAME]
 }
 # prepare dataset
 imageset = imagelist.map do |image_filepath|

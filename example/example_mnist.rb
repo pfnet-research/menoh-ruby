@@ -25,7 +25,6 @@ MNIST_OUT_NAME = '139898462888656'.freeze
 
 # conditions for model
 model_condition = {
-  output_layers: [MNIST_OUT_NAME],
   backend: 'mkldnn'
 }
 # make model for inference under 'model_condition'
@@ -36,7 +35,8 @@ input_condition = {
   channel_num: 1,
   height: 28,
   width: 28,
-  input_layer: MNIST_IN_NAME
+  input_layer: MNIST_IN_NAME,
+  output_layers: [MNIST_OUT_NAME]
 }
 # prepare dataset
 imageset = imagelist.map do |image_filepath|

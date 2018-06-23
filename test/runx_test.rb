@@ -12,7 +12,6 @@ class RunxTest < Minitest::Test
     onnx = Runx::Runx.new('example/data/mnist.onnx')
     assert_instance_of(Runx::Runx, onnx)
     model_condition = {
-      output_layers: [MNIST_OUT_NAME],
       backend: 'mkldnn'
     }
     model = onnx.make_model(model_condition)
@@ -21,7 +20,8 @@ class RunxTest < Minitest::Test
       channel_num: 1,
       height: 28,
       width: 28,
-      input_layer: MNIST_IN_NAME
+      input_layer: MNIST_IN_NAME,
+      output_layers: [MNIST_OUT_NAME]
     }
     batchsize = 3
     imageset = (0..(batchsize - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
@@ -39,17 +39,8 @@ class RunxTest < Minitest::Test
     conditions = [
       {},
       {
-        output_layers: [],
-        backend: 'mkldnn'
-      },
-      {
-        output_layers: [MNIST_OUT_NAME]
-      },
-      {
-        output_layers: [MNIST_OUT_NAME],
         backend: 'invalid'
-      },
-      { output_layers: ['in valid'] }
+      }
     ]
     conditions.each do |condition|
       assert_raises { onnx.make_model(condition) }
@@ -59,7 +50,6 @@ class RunxTest < Minitest::Test
   def test_model_run_should_throw_when_model_condition_is_invalid
     onnx = Runx::Runx.new('example/data/mnist.onnx')
     model_condition = {
-      output_layers: ['invalid'],
       backend: 'mkldnn'
     }
     model = onnx.make_model(model_condition)
@@ -68,15 +58,15 @@ class RunxTest < Minitest::Test
       channel_num: 1,
       height: 28,
       width: 28,
-      input_layer: MNIST_IN_NAME
+      input_layer: MNIST_IN_NAME,
+      output_layers: ['invalid']
     }
-    # assert_raises{ model.run(imageset, input_condition) }
+    assert_raises { model.run(imageset, input_condition) }
   end
 
   def test_model_run_should_throw_when_input_condition_is_invalid
     onnx = Runx::Runx.new('example/data/mnist.onnx')
     model_condition = {
-      output_layers: [MNIST_OUT_NAME],
       backend: 'mkldnn'
     }
     model = onnx.make_model(model_condition)
@@ -86,7 +76,8 @@ class RunxTest < Minitest::Test
       channel_num: 1,
       height: 28,
       width: 28,
-      input_layer: MNIST_IN_NAME
+      input_layer: MNIST_IN_NAME,
+      output_layers: [MNIST_OUT_NAME]
     }
     input_conditions = [
       ## invalid imageset
@@ -117,7 +108,8 @@ class RunxTest < Minitest::Test
         {
           height: 28,
           width: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -125,7 +117,8 @@ class RunxTest < Minitest::Test
         {
           channel_num: 1,
           width: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -133,7 +126,8 @@ class RunxTest < Minitest::Test
         {
           channel_num: 1,
           height: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -141,7 +135,17 @@ class RunxTest < Minitest::Test
         {
           channel_num: 1,
           height: 28,
-          width: 28
+          width: 28,
+          output_layers: [MNIST_OUT_NAME]
+        }
+      ],
+      [
+        imageset,
+        {
+          channel_num: 1,
+          height: 28,
+          width: 28,
+          input_layer: MNIST_IN_NAME
         }
       ],
       ## invalid type
@@ -151,7 +155,8 @@ class RunxTest < Minitest::Test
           channel_num: '1',
           height: 28,
           width: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -160,7 +165,8 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: '28',
           width: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -169,7 +175,8 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 28,
           width: '28',
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -178,7 +185,18 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 28,
           width: 28,
-          input_layer: 9_999_999
+          input_layer: 9_999_999,
+          output_layers: [MNIST_OUT_NAME]
+        }
+      ],
+      [
+        imageset,
+        {
+          channel_num: 1,
+          height: 28,
+          width: 28,
+          input_layer: MNIST_IN_NAME,
+          output_layers: [9_999_999]
         }
       ],
       ## zero
@@ -188,7 +206,8 @@ class RunxTest < Minitest::Test
           channel_num: 0,
           height: 28,
           width: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -197,7 +216,8 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 0,
           width: 28,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -206,7 +226,8 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 28,
           width: 0,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       [
@@ -215,7 +236,18 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 28,
           width: 28,
-          input_layer: ''
+          input_layer: '',
+          output_layers: [MNIST_OUT_NAME]
+        }
+      ],
+      [
+        imageset,
+        {
+          channel_num: 1,
+          height: 28,
+          width: 28,
+          input_layer: '',
+          output_layers: ['']
         }
       ],
       ## invalid image size
@@ -225,7 +257,8 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 28,
           width: 189,
-          input_layer: MNIST_IN_NAME
+          input_layer: MNIST_IN_NAME,
+          output_layers: [MNIST_OUT_NAME]
         }
       ],
       ## onnx doesn't have name
@@ -235,7 +268,18 @@ class RunxTest < Minitest::Test
           channel_num: 1,
           height: 28,
           width: 28,
-          input_layer: 'invalid'
+          input_layer: 'invalid',
+          output_layers: [MNIST_OUT_NAME]
+        }
+      ],
+      [
+        imageset,
+        {
+          channel_num: 1,
+          height: 28,
+          width: 28,
+          input_layer: MNIST_IN_NAME,
+          output_layers: ['invalid']
         }
       ]
     ]
