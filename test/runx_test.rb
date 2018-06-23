@@ -23,7 +23,7 @@ class RunxTest < Minitest::Test
       :width => 28,
       :input_layer => MNIST_IN_NAME,
     }
-    imageset = (0..9).map{ |i| (0..(1*28*28-1)).to_a }
+    imageset = (0..4).map{ |i| (0..(1*28*28-1)).to_a }
     inference_results = model.run(imageset, input_condition)
     assert_instance_of(Array, inference_results)
     assert_equal(10, inference_results.length)

@@ -33,6 +33,7 @@ end
 module Runx
   class RunxModel
     def initialize runx, condition
+      # TODO check condition
       native_init runx, condition
       if block_given?
         begin
@@ -46,26 +47,30 @@ module Runx
       if not dataset.instance_of?(Array) or dataset.length == 0
         raise "Invalid dataset" 
       end
+      [:channel_num, :width, :height].each do |key|
+        if condition[key] == nil
+          raise "Required : #{key.to_s}"
+        end
+        if not condition[key].integer?
+          raise "Invalid option : #{key.to_s}" 
+        end
+      end
+      if condition[:input_layer] == nil
+        raise "Required : #{:input_layer.to_s}"
+      end
       if not condition[:input_layer].instance_of?(String) or condition[:input_layer].length == 0
-        raise "Invalid ':input_layer'" 
+        raise "Invalid option : #{:input_layer.to_s}" 
       end
+
       # TODO no such layer      
-      if not condition[:channel_num].integer? or condition[:channel_num] <= 0
-        raise "Invalid ':channel_num'" 
-      end
-      if not condition[:width].integer? or condition[:width] <= 0
-        raise "Invalid ':width'" 
-      end
-      if not condition[:height].integer? or condition[:height] <= 0
-        raise "Invalid ':height'" 
-      end
       expected_data_length = condition[:channel_num] * condition[:width] * condition[:height]
       dataset.each do |data|
         if data.length != expected_data_length
           raise "Invalid data length: expected==#{expected_data_length} actual==#{data.length}"
         end
       end
-      native_run dataset, condition
+      a = native_run dataset, condition
+      p a
     end
   end
 end
