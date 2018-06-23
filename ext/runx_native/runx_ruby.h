@@ -4,5 +4,4 @@
 #include <ruby.h>
 #include <menoh/menoh.h>
 
-
 #endif /* RUNX_H */

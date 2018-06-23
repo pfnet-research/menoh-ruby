@@ -1,19 +1,18 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/xenial64"
+Vagrant.configure('2') do |config|
+  config.vm.box = 'ubuntu/xenial64'
 
-  config.vm.provider "virtualbox" do |vb|
-    vb.memory = "4096"
+  config.vm.provider 'virtualbox' do |vb|
+    vb.memory = '4096'
     vb.cpus = 2
   end
 
-  config.vm.provision "shell", inline: <<-SHELL
+  config.vm.provision 'shell', inline: <<-SHELL
     export INSTALL_PREFIX=/usr/local
-    export RUNX_VERSION=0.4.0-alpha
     sudo apt update
-    sudo apt install -y gcc g++ cmake cmake-data libopencv-dev 
+    sudo apt install -y gcc g++ cmake cmake-data libopencv-dev
     sudo apt install -y ruby-dev ruby-rmagick
     sudo gem install bundler rake-compiler
 
@@ -31,8 +30,8 @@ Vagrant.configure("2") do |config|
 
     # Runx
     cd
-    unzip /vagrant/external/Runx-$RUNX_VERSION.zip
-    cd Runx-$RUNX_VERSION
+    git clone https://github.com/pfnet-research/menoh.git
+    cd menoh
     sed -i 's/add_subdirectory(example)//g' CMakeLists.txt
     sed -i 's/add_subdirectory(test)//g' CMakeLists.txt
     mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make

@@ -1,4 +1,4 @@
-$LOAD_PATH.unshift File.expand_path("../../lib", __FILE__)
-require "runx"
+$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
+require 'runx'
 
-require "minitest/autorun"
+require 'minitest/autorun'

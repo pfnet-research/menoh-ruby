@@ -1,10 +1,10 @@
-require "runx/version"
-require "runx/runx_native"
+require 'runx/version'
+require 'runx/runx_native'
 
 module Runx
   class Runx
-    def initialize file
-      if not file.instance_of?(String) or not File.exist?(file)
+    def initialize(file)
+      if !file.instance_of?(String) || !File.exist?(file)
         raise "No such file : #{file}"
       end
 
@@ -17,12 +17,13 @@ module Runx
         end
       end
     end
-    def make_model condition
-      if condition[:output_layers] == nil or condition[:output_layers].length == 0
-        raise "Invalid ':output_layers'" 
+
+    def make_model(condition)
+      if condition[:output_layers].nil? || condition[:output_layers].empty?
+        raise "Invalid ':output_layers'"
       end
-      # TODO no such layer
-      if condition[:backend] == nil or condition[:backend] != "mkldnn"
+      # TODO: no such layer
+      if condition[:backend].nil? || (condition[:backend] != 'mkldnn')
         raise "Invalid ':backend' : #{condition[:backend]}"
       end
       RunxModel.new self, condition
@@ -30,8 +31,8 @@ module Runx
   end
 end
 
-def transpose buffer, shape
-  sliced_buffer = buffer.each_slice( buffer.length / shape[0] ).to_a
+def transpose(buffer, shape)
+  sliced_buffer = buffer.each_slice(buffer.length / shape[0]).to_a
   if shape.length > 2
     next_shape = shape.slice(1, a.length)
     sliced_buffer = sliced_buffer.map { |buf| transpose buf }
@@ -40,10 +41,9 @@ def transpose buffer, shape
 end
 
 module Runx
-
   class RunxModel
-    def initialize runx, condition
-      # TODO check condition
+    def initialize(runx, condition)
+      # TODO: check condition
       native_init runx, condition
       if block_given?
         begin
@@ -53,23 +53,16 @@ module Runx
         end
       end
     end
-    def run dataset, condition
-      if not dataset.instance_of?(Array) or dataset.length == 0
-        raise "Invalid dataset" 
+
+    def run(dataset, condition)
+      raise 'Invalid dataset' if !dataset.instance_of?(Array) || dataset.empty?
+      %i[channel_num width height].each do |key|
+        raise "Required : #{key}" if condition[key].nil?
+        raise "Invalid option : #{key}" unless condition[key].integer?
       end
-      [:channel_num, :width, :height].each do |key|
-        if condition[key] == nil
-          raise "Required : #{key.to_s}"
-        end
-        if not condition[key].integer?
-          raise "Invalid option : #{key.to_s}" 
-        end
-      end
-      if condition[:input_layer] == nil
-        raise "Required : #{:input_layer.to_s}"
-      end
-      if not condition[:input_layer].instance_of?(String) or condition[:input_layer].length == 0
-        raise "Invalid option : #{:input_layer.to_s}" 
+      raise 'Required : input_layer' if condition[:input_layer].nil?
+      if !condition[:input_layer].instance_of?(String) || condition[:input_layer].empty?
+        raise 'Invalid option : input_layer'
       end
 
       expected_data_length = condition[:channel_num] * condition[:width] * condition[:height]
@@ -85,7 +78,7 @@ module Runx
       # reshape result
       raw_results.map do |raw|
         buffer = raw[:buffer]
-        shape = raw[:shape]  
+        shape = raw[:shape]
         raw[:buffer] = transpose buffer, shape
       end
       results = []
