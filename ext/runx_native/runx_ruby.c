@@ -50,6 +50,10 @@ typedef struct runxModel {
   VALUE vbackend;
   float *input_buff;
   float **output_buffs;
+  menoh_variable_profile_table_builder_handle vpt_builder;
+  menoh_variable_profile_table_handle variable_profile_table;
+  menoh_model_builder_handle model_builder;
+  menoh_model_handle model;
 } runxModel;
 
 static runxModel *getModel(VALUE self) {
@@ -64,6 +68,14 @@ static void wrap_model_free(runxModel *p) {
       free(p->input_buff);
     if (p->output_buffs)
       free(p->output_buffs);
+    if (p->model)
+      menoh_delete_model(p->model);
+    if (p->model_builder)
+      menoh_delete_model_builder(p->model_builder);
+    if (p->variable_profile_table)
+      menoh_delete_variable_profile_table(p->variable_profile_table);
+    if (p->vpt_builder)
+      menoh_delete_variable_profile_table_builder(p->vpt_builder);
     ruby_xfree(p);
   }
 }
@@ -111,8 +123,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
 
   //////////////////////////
   // get vpt builder
-  menoh_variable_profile_table_builder_handle vpt_builder;
-  ERROR_CHECK(menoh_make_variable_profile_table_builder(&vpt_builder),
+  ERROR_CHECK(menoh_make_variable_profile_table_builder(&(getModel(self)->vpt_builder)),
               rb_eStandardError);
 
   // set output_layer
@@ -122,31 +133,29 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     ERROR_CHECK(
         menoh_variable_profile_table_builder_add_output_profile(
-            vpt_builder, StringValuePtr(voutput_layer), menoh_dtype_float),
+            getModel(self)->vpt_builder, StringValuePtr(voutput_layer), menoh_dtype_float),
         rb_eStandardError);
   }
 
   // set input layer
   ERROR_CHECK(menoh_variable_profile_table_builder_add_input_profile_dims_4(
-                  vpt_builder, StringValuePtr(vinput_layer), menoh_dtype_float,
+                  getModel(self)->vpt_builder, StringValuePtr(vinput_layer), menoh_dtype_float,
                   batch_size, channel_num, width, height),
               rb_eStandardError);
 
   // build variable provile table
-  menoh_variable_profile_table_handle variable_profile_table;
-  ERROR_CHECK(menoh_build_variable_profile_table(vpt_builder,
+  ERROR_CHECK(menoh_build_variable_profile_table(getModel(self)->vpt_builder,
                                                  getModel(self)->model_data,
-                                                 &variable_profile_table),
+                                                 &(getModel(self)->variable_profile_table)),
               rb_eStandardError);
 
   // optimize
   ERROR_CHECK(menoh_model_data_optimize(getModel(self)->model_data,
-                                        variable_profile_table),
+                                        getModel(self)->variable_profile_table),
               rb_eStandardError);
 
   // get model buildler
-  menoh_model_builder_handle model_builder;
-  ERROR_CHECK(menoh_make_model_builder(variable_profile_table, &model_builder),
+  ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table, &(getModel(self)->model_builder)),
               rb_eStandardError);
 
   // attach input buffer to model builder
@@ -154,14 +163,13 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
                                                channel_num * width * height);
 
   ERROR_CHECK(menoh_model_builder_attach_external_buffer(
-                  model_builder, StringValuePtr(vinput_layer),
+                  getModel(self)->model_builder, StringValuePtr(vinput_layer),
                   getModel(self)->input_buff),
               rb_eStandardError);
 
   // build model
-  menoh_model_handle model;
-  ERROR_CHECK(menoh_build_model(model_builder, getModel(self)->model_data,
-                                StringValuePtr(vbackend), "", &model),
+  ERROR_CHECK(menoh_build_model(getModel(self)->model_builder, getModel(self)->model_data,
+                                StringValuePtr(vbackend), "", &(getModel(self)->model)),
               rb_eStandardError);
 
   // Copy input image data to model's input array
@@ -181,13 +189,13 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     float *output_buff;
     ERROR_CHECK(
         menoh_model_get_variable_buffer_handle(
-            model, StringValuePtr(voutput_layer), (void **)&output_buff),
+            getModel(self)->model, StringValuePtr(voutput_layer), (void **)&output_buff),
         rb_eStandardError);
     getModel(self)->output_buffs[i] = output_buff;
   }
 
   // run model
-  ERROR_CHECK(menoh_model_run(model), rb_eStandardError);
+  ERROR_CHECK(menoh_model_run(getModel(self)->model), rb_eStandardError);
 
   // Get output
   VALUE results = rb_ary_new();
@@ -201,14 +209,14 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
     int32_t output_buffer_length = 1;
     ERROR_CHECK(
         menoh_variable_profile_table_get_dims_size(
-            variable_profile_table, StringValuePtr(voutput_layer), &(dim_size)),
+            getModel(self)->variable_profile_table, StringValuePtr(voutput_layer), &(dim_size)),
         rb_eStandardError);
     VALUE vresult_shape = rb_ary_new();
     // get each size of dimention
     for (int32_t dim = 0; dim < dim_size; dim++) {
       int32_t size;
       ERROR_CHECK(menoh_variable_profile_table_get_dims_at(
-                      variable_profile_table, StringValuePtr(voutput_layer),
+                      getModel(self)->variable_profile_table, StringValuePtr(voutput_layer),
                       dim, &(size)),
                   rb_eStandardError);
       rb_ary_push(vresult_shape, INT2NUM(size));
@@ -234,9 +242,9 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
   ret_value = results;
 
   // TODO error
-  menoh_delete_model(model);
-  menoh_delete_model_builder(model_builder);
-  menoh_delete_variable_profile_table_builder(vpt_builder);
+//   menoh_delete_model(model);
+//   menoh_delete_model_builder(model_builder);
+//   menoh_delete_variable_profile_table_builder(vpt_builder);
 
   return results;
 }
