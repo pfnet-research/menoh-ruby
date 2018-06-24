@@ -3,7 +3,6 @@ FROM ubuntu:xenial-20180228
 LABEL maintainer "Kunihiko Miyoshi <miyoshik@preferred.jp>"
 LABEL OBJECT="Menoh Ruby Extension Reference Environment"
 
-ENV RUNX_VERSION 0.4.0-alpha
 ENV INSTALL_PREFIX /usr/local
 ENV LD_LIBRARY_PATH ${INSTALL_PREFIX}/lib
 
@@ -32,11 +31,9 @@ RUN git clone https://github.com/01org/mkl-dnn.git && \
     make install
 
 # Menoh
-# TODO git clone
-ADD external/Menoh-$RUNX_VERSION.zip /opt/
 WORKDIR /opt/
-RUN unzip Menoh-$RUNX_VERSION.zip && \
-    cd Menoh-$RUNX_VERSION && \
+RUN git clone https://github.com/pfnet-research/menoh.git && \
+    cd menoh && \
     sed -i 's/add_subdirectory(example)//g' CMakeLists.txt && \
     sed -i 's/add_subdirectory(test)//g' CMakeLists.txt && \
     mkdir build && \
@@ -46,7 +43,7 @@ RUN unzip Menoh-$RUNX_VERSION.zip && \
 
 # menoh-ruby
 RUN gem install rake-compiler
-# RUN mkdir /opt/menoh-ruby
-# ADD . /opt/menoh-ruby
-# WORKDIR /opt/menoh-ruby
-# RUN rake && rake install
+RUN mkdir /opt/menoh-ruby
+ADD . /opt/menoh-ruby
+WORKDIR /opt/menoh-ruby
+RUN rake && rake install
