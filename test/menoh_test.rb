@@ -30,6 +30,31 @@ class MenohTest < Minitest::Test
     assert_equal(batchsize, inference_results.length)
   end
 
+  def test_menoh_basic_function_with_block
+    model_condition = {
+      backend: 'mkldnn'
+    }
+    input_condition = {
+      channel_num: 1,
+      height: 28,
+      width: 28,
+      input_layer: MNIST_IN_NAME,
+      output_layers: [MNIST_OUT_NAME]
+    }
+    batchsize = 3
+    imageset = (0..(batchsize - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
+    Menoh::Menoh.new('example/data/mnist.onnx') do |onnx|
+      assert_instance_of(Menoh::Menoh, onnx)
+      onnx.make_model(model_condition) do |model|
+        assert_instance_of(Menoh::MenohModel, model)
+        model.run(imageset, input_condition) do |inference_results|
+          assert_instance_of(Array, inference_results)
+          assert_equal(batchsize, inference_results.length)
+        end
+      end
+    end
+  end
+
   def test_menoh_new_should_throw_when_the_path_value_is_invalid
     assert_raises { Menoh::Menoh.new('invalid path') }
   end

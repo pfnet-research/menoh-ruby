@@ -9,20 +9,16 @@ module Menoh
       end
 
       native_init file
-      if block_given?
-        begin
-          yield self
-        ensure
-          # do nothing
-        end
-      end
+      yield self if block_given?
     end
 
     def make_model(condition)
       if condition[:backend].nil? || (condition[:backend] != 'mkldnn')
         raise "Invalid ':backend' : #{condition[:backend]}"
       end
-      MenohModel.new self, condition
+      model = MenohModel.new self, condition
+      yield model if block_given?
+      model
     end
   end
 end
@@ -40,13 +36,7 @@ module Menoh
   class MenohModel
     def initialize(menoh, condition)
       native_init menoh, condition
-      if block_given?
-        begin
-          yield self
-        ensure
-          # do nothing
-        end
-      end
+      yield self if block_given?
     end
 
     def run(dataset, condition)
@@ -88,6 +78,7 @@ module Menoh
         end
         results << result
       end
+      yield results if block_given?
       results
     end
   end

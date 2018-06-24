@@ -20,6 +20,7 @@ imagelist = [
 # load ONNX file
 onnx_obj = Menoh::Menoh.new './data/mnist.onnx'
 
+# onnx variable name
 MNIST_IN_NAME = '139900320569040'.freeze
 MNIST_OUT_NAME = '139898462888656'.freeze
 
@@ -44,16 +45,16 @@ imageset = imagelist.map do |image_filepath|
   image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix / 256 }
 end
 # execute inference
-inference_results = model.run imageset, input_condition
+model.run imageset, input_condition do |inference_results|
+  categories = (0..9).to_a
+  TOP_K = 1
+  inference_results.zip(imagelist).each do |inference_result, image_filepath|
+    # sort by score
+    sorted_result = inference_result[MNIST_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
 
-categories = (0..9).to_a
-TOP_K = 1
-inference_results.zip(imagelist).each do |inference_result, image_filepath|
-  # sort by score
-  sorted_result = inference_result[MNIST_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
-
-  # display result
-  sorted_result[0, TOP_K].each do |score, category|
-    puts "#{image_filepath} = #{category} : #{score}"
+    # display result
+    sorted_result[0, TOP_K].each do |score, category|
+      puts "#{image_filepath} = #{category} : #{score}"
+    end
   end
 end

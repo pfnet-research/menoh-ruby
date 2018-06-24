@@ -28,6 +28,7 @@ imagelist = [
 # load ONNX file
 onnx_obj = Menoh::Menoh.new './data/VGG16.onnx'
 
+# onnx variable name
 CONV1_1_IN_NAME = '140326425860192'.freeze
 FC6_OUT_NAME = '140326200777584'.freeze
 SOFTMAX_OUT_NAME = '140326200803680'.freeze
