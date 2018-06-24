@@ -1,7 +1,7 @@
 require 'rmagick'
 include Magick
 
-require 'runx'
+require 'menoh'
 
 # load dataset
 imagelist = [
@@ -18,7 +18,7 @@ imagelist = [
 ]
 
 # load ONNX file
-onnx_obj = Runx::Runx.new './data/mnist.onnx'
+onnx_obj = Menoh::Menoh.new './data/mnist.onnx'
 
 MNIST_IN_NAME = '139900320569040'.freeze
 MNIST_OUT_NAME = '139898462888656'.freeze

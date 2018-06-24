@@ -1,4 +1,4 @@
-#include "runx_ruby.h"
+#include "menoh_ruby.h"
 
 #define ERROR_CHECK(statement, exceptiontype)                        \
   {                                                                  \
@@ -9,30 +9,30 @@
     }                                                                \
   }
 
-typedef struct runx_ruby {
+typedef struct menoh_ruby {
   menoh_model_data_handle model_data;
-} runx_ruby;
+} menoh_ruby;
 
-static runx_ruby *getONNX(VALUE self) {
-  runx_ruby *p;
-  Data_Get_Struct(self, runx_ruby, p);
+static menoh_ruby *getONNX(VALUE self) {
+  menoh_ruby *p;
+  Data_Get_Struct(self, menoh_ruby, p);
   return p;
 }
 
-static void wrap_runx_free(runx_ruby *p) {
+static void wrap_menoh_free(menoh_ruby *p) {
   if (p) {
     if (p->model_data) menoh_delete_model_data(p->model_data);
     ruby_xfree(p);
   }
 }
 
-static VALUE wrap_runx_alloc(VALUE klass) {
-  void *p = ruby_xmalloc(sizeof(runx_ruby));
-  memset(p, 0, sizeof(runx_ruby));
-  return Data_Wrap_Struct(klass, NULL, wrap_runx_free, p);
+static VALUE wrap_menoh_alloc(VALUE klass) {
+  void *p = ruby_xmalloc(sizeof(menoh_ruby));
+  memset(p, 0, sizeof(menoh_ruby));
+  return Data_Wrap_Struct(klass, NULL, wrap_menoh_free, p);
 }
 
-static VALUE wrap_runx_init(VALUE self, VALUE vfilename) {
+static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
   menoh_error_code ec = menoh_error_code_success;
   char *filename = StringValuePtr(vfilename);
 
@@ -45,7 +45,7 @@ static VALUE wrap_runx_init(VALUE self, VALUE vfilename) {
   return Qnil;
 }
 
-typedef struct runxModel {
+typedef struct menohModel {
   menoh_model_data_handle model_data;
   VALUE vbackend;
   float *input_buff;
@@ -54,15 +54,15 @@ typedef struct runxModel {
   menoh_variable_profile_table_handle variable_profile_table;
   menoh_model_builder_handle model_builder;
   menoh_model_handle model;
-} runxModel;
+} menohModel;
 
-static runxModel *getModel(VALUE self) {
-  runxModel *p;
-  Data_Get_Struct(self, runxModel, p);
+static menohModel *getModel(VALUE self) {
+  menohModel *p;
+  Data_Get_Struct(self, menohModel, p);
   return p;
 }
 
-static void wrap_model_free(runxModel *p) {
+static void wrap_model_free(menohModel *p) {
   if (p) {
     if (p->input_buff) free(p->input_buff);
     if (p->output_buffs) free(p->output_buffs);
@@ -77,8 +77,8 @@ static void wrap_model_free(runxModel *p) {
 }
 
 static VALUE wrap_model_alloc(VALUE klass) {
-  void *p = ruby_xmalloc(sizeof(runxModel));
-  memset(p, 0, sizeof(runxModel));
+  void *p = ruby_xmalloc(sizeof(menohModel));
+  memset(p, 0, sizeof(menohModel));
   return Data_Wrap_Struct(klass, NULL, wrap_model_free, p);
 }
 
@@ -238,18 +238,18 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
   return results;
 }
 
-VALUE mRunx;
+VALUE mMenoh;
 
-void Init_runx_native() {
-  mRunx = rb_define_module("Runx");
+void Init_menoh_native() {
+  mMenoh = rb_define_module("Menoh");
 
-  VALUE onnx = rb_define_class_under(mRunx, "Runx", rb_cObject);
+  VALUE onnx = rb_define_class_under(mMenoh, "Menoh", rb_cObject);
 
-  rb_define_alloc_func(onnx, wrap_runx_alloc);
+  rb_define_alloc_func(onnx, wrap_menoh_alloc);
   rb_define_private_method(onnx, "native_init",
-                           RUBY_METHOD_FUNC(wrap_runx_init), 1);
+                           RUBY_METHOD_FUNC(wrap_menoh_init), 1);
 
-  VALUE model = rb_define_class_under(mRunx, "RunxModel", rb_cObject);
+  VALUE model = rb_define_class_under(mMenoh, "MenohModel", rb_cObject);
 
   rb_define_alloc_func(model, wrap_model_alloc);
   rb_define_private_method(model, "native_init",

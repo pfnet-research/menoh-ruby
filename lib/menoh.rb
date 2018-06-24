@@ -1,8 +1,8 @@
-require 'runx/version'
-require 'runx/runx_native'
+require 'menoh/version'
+require 'menoh/menoh_native'
 
-module Runx
-  class Runx
+module Menoh
+  class Menoh
     def initialize(file)
       if !file.instance_of?(String) || !File.exist?(file)
         raise "No such file : #{file}"
@@ -22,7 +22,7 @@ module Runx
       if condition[:backend].nil? || (condition[:backend] != 'mkldnn')
         raise "Invalid ':backend' : #{condition[:backend]}"
       end
-      RunxModel.new self, condition
+      MenohModel.new self, condition
     end
   end
 end
@@ -36,10 +36,10 @@ def transpose(buffer, shape)
   sliced_buffer
 end
 
-module Runx
-  class RunxModel
-    def initialize(runx, condition)
-      native_init runx, condition
+module Menoh
+  class MenohModel
+    def initialize(menoh, condition)
+      native_init menoh, condition
       if block_given?
         begin
           yield self

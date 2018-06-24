@@ -1,6 +1,6 @@
-# Runx Ruby Extension 
+# Menoh Ruby Extension 
 
-This is a Ruby extension of [Runx](https://github.com/pfnet-research/runx); an ONNX runtime engine developed by [@okdshin](https://github.com/okdshin) and their team [@pfnet-research](pfnet-research).
+This is a Ruby extension of [Menoh](https://github.com/pfnet-research/menoh); an ONNX runtime engine developed by [@okdshin](https://github.com/okdshin) and their team [@pfnet-research](https://github.com/pfnet-research).
 
 ## Installation
 
@@ -15,7 +15,7 @@ $ sudo gem install rake-compiler
 And add this line to your application's Gemfile:
 
 ```ruby
-gem 'runx'
+gem 'menoh'
 ```
 
 And then execute:
@@ -24,12 +24,12 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install runx
+    $ gem install menoh
 
 ## Usage
 
-Please see [Runx tutorial](TODO) and [runx-ruby tutorial](TODO/docs/tutorial.md).
-And we have [some examples](example/) on this repository.
+Please see [Menoh tutorial](https://github.com/pfnet-research/menoh/blob/master/docs/tutorial.md) and [menoh-ruby tutorial](https://github.com/pfnet-research/menoh-ruby/blob/master/docs/tutorial.md).
+And we have [some examples](https://github.com/pfnet-research/menoh/blob/master/example/) on this repository.
 
 ## Development
 
@@ -43,9 +43,9 @@ You can develop on docker. For details, please refer to [Dockerfile](Dockerfile)
 
 ```bash
 $ export IMAGE_VERSION=0.0.0 # please specify version
-$ sudo -E docker build -t runx-ruby:$IMAGE_VERSION `pwd`
-$ sudo -E docker run -it --name runx-ruby-test -v $(pwd):/opt/runx-ruby --entrypoint /bin/bash runx-ruby:$IMAGE_VERSION
-＄ cd /opt/runx-ruby
+$ sudo -E docker build -t menoh-ruby:$IMAGE_VERSION `pwd`
+$ sudo -E docker run -it --name menoh-ruby-test -v $(pwd):/opt/menoh-ruby --entrypoint /bin/bash menoh-ruby:$IMAGE_VERSION
+＄ cd /opt/menoh-ruby
 ＄ rake && rake install
 
 ```
@@ -53,8 +53,8 @@ $ sudo -E docker run -it --name runx-ruby-test -v $(pwd):/opt/runx-ruby --entryp
 #### attach after stop
 
 ```bash
-sudo docker start runx-ruby-test bash
-sudo docker attach runx-ruby-test
+sudo docker start menoh-ruby-test bash
+sudo docker attach menoh-ruby-test
 ```
 
 ### Vagrant
@@ -69,7 +69,7 @@ $ cd /vagrant
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/colspan/runx-ruby. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+Bug reports and pull requests are welcome on GitHub at https://github.com/colspan/menoh-ruby. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 ## License
 
@@ -77,4 +77,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the OnnxInstant project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/colspan/runx-ruby/blob/master/CODE_OF_CONDUCT.md).
+Everyone interacting in the OnnxInstant project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/colspan/menoh-ruby/blob/master/CODE_OF_CONDUCT.md).

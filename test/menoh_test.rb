@@ -3,19 +3,19 @@ require 'test_helper'
 MNIST_IN_NAME = '139900320569040'.freeze
 MNIST_OUT_NAME = '139898462888656'.freeze
 
-class RunxTest < Minitest::Test
+class MenohTest < Minitest::Test
   def test_that_it_has_a_version_number
-    refute_nil ::Runx::VERSION
+    refute_nil ::Menoh::VERSION
   end
 
-  def test_runx_basic_function
-    onnx = Runx::Runx.new('example/data/mnist.onnx')
-    assert_instance_of(Runx::Runx, onnx)
+  def test_menoh_basic_function
+    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
+    assert_instance_of(Menoh::Menoh, onnx)
     model_condition = {
       backend: 'mkldnn'
     }
     model = onnx.make_model(model_condition)
-    assert_instance_of(Runx::RunxModel, model)
+    assert_instance_of(Menoh::MenohModel, model)
     input_condition = {
       channel_num: 1,
       height: 28,
@@ -30,12 +30,12 @@ class RunxTest < Minitest::Test
     assert_equal(batchsize, inference_results.length)
   end
 
-  def test_runx_new_should_throw_when_the_path_value_is_invalid
-    assert_raises { Runx::Runx.new('invalid path') }
+  def test_menoh_new_should_throw_when_the_path_value_is_invalid
+    assert_raises { Menoh::Menoh.new('invalid path') }
   end
 
   def test_make_model_should_throw_when_the_condition_is_invaild
-    onnx = Runx::Runx.new('example/data/mnist.onnx')
+    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
     conditions = [
       {},
       {
@@ -48,7 +48,7 @@ class RunxTest < Minitest::Test
   end
 
   def test_model_run_should_throw_when_model_condition_is_invalid
-    onnx = Runx::Runx.new('example/data/mnist.onnx')
+    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
     model_condition = {
       backend: 'mkldnn'
     }
@@ -65,7 +65,7 @@ class RunxTest < Minitest::Test
   end
 
   def test_model_run_should_throw_when_input_condition_is_invalid
-    onnx = Runx::Runx.new('example/data/mnist.onnx')
+    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
     model_condition = {
       backend: 'mkldnn'
     }

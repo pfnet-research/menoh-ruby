@@ -1,7 +1,7 @@
 FROM ubuntu:xenial-20180228
 
-MAINTAINER Kunihiko Miyoshi
-LABEL OBJECT="Runx Ruby Extension Reference Environment"
+LABEL maintainer "Kunihiko Miyoshi <miyoshik@preferred.jp>"
+LABEL OBJECT="Menoh Ruby Extension Reference Environment"
 
 ENV RUNX_VERSION 0.4.0-alpha
 ENV INSTALL_PREFIX /usr/local
@@ -31,12 +31,12 @@ RUN git clone https://github.com/01org/mkl-dnn.git && \
     mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make && \
     make install
 
-# Runx
+# Menoh
 # TODO git clone
-ADD external/Runx-$RUNX_VERSION.zip /opt/
+ADD external/Menoh-$RUNX_VERSION.zip /opt/
 WORKDIR /opt/
-RUN unzip Runx-$RUNX_VERSION.zip && \
-    cd Runx-$RUNX_VERSION && \
+RUN unzip Menoh-$RUNX_VERSION.zip && \
+    cd Menoh-$RUNX_VERSION && \
     sed -i 's/add_subdirectory(example)//g' CMakeLists.txt && \
     sed -i 's/add_subdirectory(test)//g' CMakeLists.txt && \
     mkdir build && \
@@ -44,9 +44,9 @@ RUN unzip Runx-$RUNX_VERSION.zip && \
     cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && \
     make install
 
-# runx-ruby
+# menoh-ruby
 RUN gem install rake-compiler
-# RUN mkdir /opt/runx-ruby
-# ADD . /opt/runx-ruby
-# WORKDIR /opt/runx-ruby
+# RUN mkdir /opt/menoh-ruby
+# ADD . /opt/menoh-ruby
+# WORKDIR /opt/menoh-ruby
 # RUN rake && rake install

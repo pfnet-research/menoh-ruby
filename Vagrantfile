@@ -28,7 +28,7 @@ Vagrant.configure('2') do |config|
     mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make
     sudo make install
 
-    # Runx
+    # Menoh
     cd
     git clone https://github.com/pfnet-research/menoh.git
     cd menoh
@@ -37,7 +37,7 @@ Vagrant.configure('2') do |config|
     mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make
     sudo make install
 
-    # runx-ruby
+    # menoh-ruby
     export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:$LD_LIBRARY_PATH
     cd /vagrant
     rake

@@ -2,7 +2,7 @@ require 'open-uri'
 require 'rmagick'
 include Magick
 
-require 'runx'
+require 'menoh'
 
 # download dependencies
 def download_file(url, output)
@@ -26,7 +26,7 @@ imagelist = [
 ]
 
 # load ONNX file
-onnx_obj = Runx::Runx.new './data/VGG16.onnx'
+onnx_obj = Menoh::Menoh.new './data/VGG16.onnx'
 
 CONV1_1_IN_NAME = '140326425860192'.freeze
 FC6_OUT_NAME = '140326200777584'.freeze

@@ -1,13 +1,13 @@
 # Tutorial
 
 In this tutorial, we are going to make a CNN model inference software.
-This tutorial is based on [Runx](https://github.com/pfnet-research/runxpfnet-research)'s [original tutorial](TODO).
+This tutorial is based on [Menoh](https://github.com/pfnet-research/menoh)'s [original tutorial](https://github.com/pfnet-research/menoh/blob/master/docs/tutorial.md).
 
 This script loads `data/VGG16.onnx` and takes input image, then outputs classification result.
 
 ## Setup model
 
-For gettinig ONNX model's named variables, please refer to [Runx Tutorial](TODO tutorial.md).
+For gettinig ONNX model's named variables, please refer to [Menoh Tutorial](https://github.com/pfnet-research/menoh/blob/master/docs/tutorial.md).
 
 VGG16 has one input and one output. So now we can check that the input name is *140326425860192* (input of 0:Conv) and the output name is *140326200803680* (output of 39:Softmax).
 
@@ -24,7 +24,7 @@ SOFTMAX_OUT_NAME = "140326200803680"
 To build model, we load model data from ONNX file:
 
 ```ruby
-onnx_obj = Runx::Runx.new("./data/VGG16.onnx")
+onnx_obj = Menoh::Menoh.new "./data/VGG16.onnx"
 ```
 
 Now let's build the model.
@@ -32,18 +32,17 @@ Now let's build the model.
 ```ruby
 # conditions for model
 model_condition = {
-  :output_layers => [FC6_OUT_NAME, SOFTMAX_OUT_NAME],
-  :backend => "mkldnn",
+  :backend => "mkldnn"
 }
 # make model for inference under 'condition'
-model = onnx_obj.make_model(model_condition)
+model = onnx_obj.make_model model_condition
 ```
 
 ## Preprocessing dataset
 
 Before running the inference, the preprocessing of input dataset is required. `data/VGG16.onnx` takes 3 channels 224 x 224 sized image but input image is not always sized 224x224. So we use Imagemagick's `resize_to_fill` method for resizing.
 
-Runx takes images as NCHW format (N x Channels x Height x Width), but `Mat` of OpenCV holds image as HWC format (Height x Width x Channels). In addition, `data/VGG16.onnx` takes RGB image but `Mat` holds image as BGR format. So next we call `export_pixels` method for each channels `["R", "G", "B"]`, then `flatten` arrays.
+Menoh takes images as NCHW format (N x Channels x Height x Width), but `Mat` of OpenCV holds image as HWC format (Height x Width x Channels). In addition, `data/VGG16.onnx` takes RGB image but `Mat` holds image as BGR format. So next we call `export_pixels` method for each channels `["R", "G", "B"]`, then `flatten` arrays.
 
 ```ruby
 imagelist = [
@@ -56,6 +55,7 @@ input_condition = {
   :height => 224,
   :width => 224,
   :input_layer => CONV1_1_IN_NAME,
+  :output_layers => [FC6_OUT_NAME, SOFTMAX_OUT_NAME]
 }
 imageset = imagelist.map do |image_filepath|
   image = Image.read(image_filepath).first.resize_to_fill(input_condition[:width], input_condition[:height])
@@ -84,7 +84,7 @@ Now we can run the inference.
 
 ```ruby
 # execute inference
-inference_results = model.run(imageset, input_condition)
+inference_results = model.run imageset, input_condition
 ```
 
 The `inference_results` is the array that contains the hash of results of `output_layers`. So you can get each value as follows.
@@ -98,4 +98,4 @@ end
 
 That's it.
 
-The full code is available at [VGG16 example](TODO/example/example_vgg16.rb).
+The full code is available at [VGG16 example](https://github.com/pfnet-research/menoh-ruby/blob/master/example/example_vgg16.rb).
