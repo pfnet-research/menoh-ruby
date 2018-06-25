@@ -1,6 +1,4 @@
 require 'rmagick'
-include Magick
-
 require 'menoh'
 
 # load dataset
@@ -25,14 +23,14 @@ MNIST_IN_NAME = '139900320569040'.freeze
 MNIST_OUT_NAME = '139898462888656'.freeze
 
 # conditions for model
-model_condition = {
+model_opt = {
   backend: 'mkldnn'
 }
-# make model for inference under 'model_condition'
-model = onnx_obj.make_model model_condition
+# make model for inference under 'model_opt'
+model = onnx_obj.make_model model_opt
 
 # conditions for input
-input_condition = {
+condition = {
   channel_num: 1,
   height: 28,
   width: 28,
@@ -41,16 +39,17 @@ input_condition = {
 }
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
-  image = Image.read(image_filepath).first.resize_to_fill(input_condition[:width], input_condition[:height])
+  image = Magick::Image.read(image_filepath).first
+  image = image.resize_to_fill(condition[:width], condition[:height])
   image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix / 256 }
 end
 # execute inference
-model.run imageset, input_condition do |inference_results|
+model.run imageset, condition do |results|
   categories = (0..9).to_a
   TOP_K = 1
-  inference_results.zip(imagelist).each do |inference_result, image_filepath|
+  results.zip(imagelist).each do |result, image_filepath|
     # sort by score
-    sorted_result = inference_result[MNIST_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
+    sorted_result = result[MNIST_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
 
     # display result
     sorted_result[0, TOP_K].each do |score, category|

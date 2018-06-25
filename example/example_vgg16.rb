@@ -1,15 +1,13 @@
 require 'open-uri'
 require 'rmagick'
-include Magick
-
 require 'menoh'
 
 # download dependencies
 def download_file(url, output)
   return if File.exist? output
   puts "downloading... #{url}"
-  open(output, 'wb') do |f_output|
-    open(url, 'rb') do |f_input|
+  File.open(output, 'wb') do |f_output|
+    File.open(url, 'rb') do |f_input|
       f_output.write f_input.read
     end
   end
@@ -34,14 +32,14 @@ FC6_OUT_NAME = '140326200777584'.freeze
 SOFTMAX_OUT_NAME = '140326200803680'.freeze
 
 # conditions for model
-model_condition = {
+model_opt = {
   backend: 'mkldnn'
 }
 # make model for inference under 'condition'
-model = onnx_obj.make_model model_condition
+model = onnx_obj.make_model model_opt
 
 # conditions for input
-input_condition = {
+condition = {
   channel_num: 3,
   height: 224,
   width: 224,
@@ -50,24 +48,25 @@ input_condition = {
 }
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
-  image = Image.read(image_filepath).first.resize_to_fill(input_condition[:width], input_condition[:height])
+  image = Magick::Image.read(image_filepath).first
+  image = image.resize_to_fill(condition[:width], condition[:height])
   'RGB'.split('').map do |color|
     image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
   end.flatten
 end
 
 # execute inference
-inference_results = model.run imageset, input_condition
+results = model.run imageset, condition
 
 # load category definition
 categories = File.read('./data/synset_words.txt').split("\n")
 
 TOP_K = 5
-inference_results.zip(imagelist).each do |inference_result, image_filepath|
+results.zip(imagelist).each do |result, image_filepath|
   puts "=== Result for #{image_filepath} ==="
 
   # sort by score
-  sorted_result = inference_result[SOFTMAX_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
+  sorted_result = result[SOFTMAX_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
 
   # display result
   sorted_result[0, TOP_K].each do |score, category|
