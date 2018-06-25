@@ -11,45 +11,43 @@ class MenohTest < Minitest::Test
   def test_menoh_basic_function
     onnx = Menoh::Menoh.new('example/data/mnist.onnx')
     assert_instance_of(Menoh::Menoh, onnx)
-    model_condition = {
-      backend: 'mkldnn'
-    }
-    model = onnx.make_model(model_condition)
-    assert_instance_of(Menoh::MenohModel, model)
-    input_condition = {
+    batch_size = 3
+    model_opt = {
+      backend: 'mkldnn',
+      batch_size: batch_size,
       channel_num: 1,
       height: 28,
       width: 28,
       input_layer: MNIST_IN_NAME,
       output_layers: [MNIST_OUT_NAME]
     }
-    batchsize = 3
-    imageset = (0..(batchsize - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
-    inference_results = model.run(imageset, input_condition)
+    model = onnx.make_model(model_opt)
+    assert_instance_of(Menoh::MenohModel, model)
+    imageset = (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
+    inference_results = model.run imageset
     assert_instance_of(Array, inference_results)
-    assert_equal(batchsize, inference_results.length)
+    assert_equal(batch_size, inference_results.length)
   end
 
   def test_menoh_basic_function_with_block
-    model_condition = {
-      backend: 'mkldnn'
-    }
-    input_condition = {
+    batch_size = 3
+    model_opt = {
+      backend: 'mkldnn',
+      batch_size: batch_size,
       channel_num: 1,
       height: 28,
       width: 28,
       input_layer: MNIST_IN_NAME,
       output_layers: [MNIST_OUT_NAME]
     }
-    batchsize = 3
-    imageset = (0..(batchsize - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
+    imageset = (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
     Menoh::Menoh.new('example/data/mnist.onnx') do |onnx|
       assert_instance_of(Menoh::Menoh, onnx)
-      onnx.make_model(model_condition) do |model|
+      onnx.make_model(model_opt) do |model|
         assert_instance_of(Menoh::MenohModel, model)
-        model.run(imageset, input_condition) do |inference_results|
+        model.run imageset do |inference_results|
           assert_instance_of(Array, inference_results)
-          assert_equal(batchsize, inference_results.length)
+          assert_equal(batch_size, inference_results.length)
         end
       end
     end
@@ -59,257 +57,235 @@ class MenohTest < Minitest::Test
     assert_raises { Menoh::Menoh.new('invalid path') }
   end
 
-  def test_make_model_should_throw_when_the_condition_is_invaild
+  def test_make_model_should_throw_when_the_option_is_invaild
     onnx = Menoh::Menoh.new('example/data/mnist.onnx')
-    conditions = [
-      {},
-      {
-        backend: 'invalid'
-      }
-    ]
-    conditions.each do |condition|
-      assert_raises { onnx.make_model(condition) }
-    end
-  end
 
-  def test_model_run_should_throw_when_model_condition_is_invalid
-    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
-    model_condition = {
-      backend: 'mkldnn'
-    }
-    model = onnx.make_model(model_condition)
-    imageset = (0..9).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
-    input_condition = {
-      channel_num: 1,
-      height: 28,
-      width: 28,
-      input_layer: MNIST_IN_NAME,
-      output_layers: ['invalid']
-    }
-    assert_raises { model.run(imageset, input_condition) }
-  end
+    # empty
+    assert_raises { onnx.make_model({}) }
 
-  def test_model_run_should_throw_when_input_condition_is_invalid
-    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
-    model_condition = {
-      backend: 'mkldnn'
-    }
-    model = onnx.make_model(model_condition)
-
-    imageset = (0..9).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
-    valid_condition = {
+    # missing
+    missing_base_opt = {
+      backend: 'mkldnn',
+      batch_size: 1,
       channel_num: 1,
       height: 28,
       width: 28,
       input_layer: MNIST_IN_NAME,
       output_layers: [MNIST_OUT_NAME]
     }
-    input_conditions = [
-      ## invalid imageset
-      [
-        nil,
-        valid_condition
-      ],
-      [
-        [],
-        valid_condition
-      ],
-      [
-        78_953_278,
-        valid_condition
-      ],
-      [
-        '[invalid]',
-        valid_condition
-      ],
-      ## nil of condition
-      [
-        imageset,
-        {}
-      ],
-      ## partial nil of condition
-      [
-        imageset,
-        {
-          height: 28,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: MNIST_IN_NAME
-        }
-      ],
-      ## invalid type
-      [
-        imageset,
-        {
-          channel_num: '1',
-          height: 28,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: '28',
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: '28',
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: 9_999_999,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [9_999_999]
-        }
-      ],
-      ## zero
-      [
-        imageset,
-        {
-          channel_num: 0,
-          height: 28,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 0,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 0,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: '',
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: '',
-          output_layers: ['']
-        }
-      ],
-      ## invalid image size
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 189,
-          input_layer: MNIST_IN_NAME,
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      ## onnx doesn't have name
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: 'invalid',
-          output_layers: [MNIST_OUT_NAME]
-        }
-      ],
-      [
-        imageset,
-        {
-          channel_num: 1,
-          height: 28,
-          width: 28,
-          input_layer: MNIST_IN_NAME,
-          output_layers: ['invalid']
-        }
-      ]
+    missing_base_opt.keys do |key|
+      opt = missing_base_opt.delete(key)
+      assert_raises { onnx.make_model(opt) }
+    end
+
+    ## invalid type
+    invalid_opts = [
+      {
+        backend: 'invalid',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: '1',
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: '1',
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: '28',
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: '28',
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      # {
+      #   backend: 'mkldnn',
+      #   batch_size: 1,
+      #   channel_num: 1,
+      #   height: 28,
+      #   width: 28,
+      #   input_layer: 9_999_999,
+      #   output_layers: [MNIST_OUT_NAME]
+      # },
+      # {
+      #   backend: 'mkldnn',
+      #   batch_size: 1,
+      #   channel_num: 1,
+      #   height: 28,
+      #   width: 28,
+      #   input_layer: MNIST_IN_NAME,
+      #   output_layers: [9_999_999]
+      # }
     ]
-    input_conditions.each do |args|
-      assert_raises { model.run(args[0], args[1]) }
+    invalid_opts.each do |opt|
+      assert_raises { onnx.make_model(opt) }
+    end
+
+    ## zero
+    zero_opts = [
+      {
+        backend: 'mkldnn',
+        batch_size: 0,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 0,
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 0,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 0,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      }
+    ]
+    zero_opts.each do |opt|
+      assert_raises { onnx.make_model(opt) }
+    end
+
+    empty_string_opts = [
+      {
+        backend: '',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: '',
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: '',
+        output_layers: ['']
+      }
+    ]
+    empty_string_opts.each do |opt|
+      assert_raises { onnx.make_model(opt) }
+    end
+
+    etc_opts = [
+      ## invalid image size
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 189,
+        input_layer: MNIST_IN_NAME,
+        output_layers: [MNIST_OUT_NAME]
+      },
+      ## onnx doesn't have name
+      {
+        backend: 'mkldnn',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: 'invalid',
+        output_layers: [MNIST_OUT_NAME]
+      },
+      {
+        backend: 'invalid',
+        batch_size: 1,
+        channel_num: 1,
+        height: 28,
+        width: 28,
+        input_layer: MNIST_IN_NAME,
+        output_layers: ['invalid']
+      }
+    ]
+    etc_opts.each do |opt|
+      assert_raises { onnx.make_model(opt) }
     end
   end
+
+  def test_model_run_should_throw_when_input_option_is_invalid
+    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
+    batch_size = 10
+    model_opt = {
+      backend: 'mkldnn',
+      batch_size: batch_size,
+      channel_num: 1,
+      height: 28,
+      width: 28,
+      input_layer: MNIST_IN_NAME,
+      output_layers: [MNIST_OUT_NAME]
+    }
+    model = onnx.make_model(model_opt)
+
+    test_imagesets = [
+      ## invalid imageset
+      nil,
+      [],
+      78_953_278,
+      '[invalid]'
+    ]
+    test_imagesets.each do |imageset|
+      assert_raises { model.run(imageset) }
+    end
+  end
+
+  # TODO test_model_run_shold_throw_when_image_size_is_not_valid
+
 end

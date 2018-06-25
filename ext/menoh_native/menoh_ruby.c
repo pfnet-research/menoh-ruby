@@ -54,6 +54,12 @@ typedef struct menohModel {
   menoh_variable_profile_table_handle variable_profile_table;
   menoh_model_builder_handle model_builder;
   menoh_model_handle model;
+  int32_t batch_size;
+  int32_t channel_num;
+  int32_t height;
+  int32_t width;
+  VALUE vinput_layer;
+  VALUE voutput_layers;
 } menohModel;
 
 static menohModel *getModel(VALUE self) {
@@ -82,37 +88,34 @@ static VALUE wrap_model_alloc(VALUE klass) {
   return Data_Wrap_Struct(klass, NULL, wrap_model_free, p);
 }
 
-static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE condition) {
-  // condition
+static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
+  // option
   getModel(self)->model_data = getONNX(vonnx)->model_data;
   VALUE vbackend =
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("backend")));
+      rb_hash_aref(option, rb_to_symbol(rb_str_new2("backend")));
   getModel(self)->vbackend = vbackend;
 
-  return Qnil;
-}
-
-static VALUE wrap_model_prepare(VALUE self, VALUE vbatchsize, VALUE condition) {
-}
-
-static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
-  // condition
+  // option
+  int32_t batch_size = NUM2INT(
+      rb_hash_aref(option, rb_to_symbol(rb_str_new2("batch_size"))));
   int32_t channel_num = NUM2INT(
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("channel_num"))));
+      rb_hash_aref(option, rb_to_symbol(rb_str_new2("channel_num"))));
   int32_t height =
-      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("height"))));
+      NUM2INT(rb_hash_aref(option, rb_to_symbol(rb_str_new2("height"))));
   int32_t width =
-      NUM2INT(rb_hash_aref(condition, rb_to_symbol(rb_str_new2("width"))));
-
-  int32_t batch_size =
-      NUM2INT(rb_funcall(dataset, rb_intern("length"), 0, NULL));
-  int32_t array_length = channel_num * width * height;
-
-  VALUE vbackend = getModel(self)->vbackend;
+      NUM2INT(rb_hash_aref(option, rb_to_symbol(rb_str_new2("width"))));
   VALUE vinput_layer =
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("input_layer")));
+      rb_hash_aref(option, rb_to_symbol(rb_str_new2("input_layer")));
   VALUE voutput_layers =
-      rb_hash_aref(condition, rb_to_symbol(rb_str_new2("output_layers")));
+      rb_hash_aref(option, rb_to_symbol(rb_str_new2("output_layers")));
+
+  getModel(self)->batch_size = batch_size;
+  getModel(self)->channel_num = channel_num;
+  getModel(self)->height = height;
+  getModel(self)->width = width;
+  getModel(self)->vinput_layer = vinput_layer;
+  getModel(self)->voutput_layers = voutput_layers;
+
 
   // get vpt builder
   ERROR_CHECK(
@@ -130,6 +133,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
                 rb_eStandardError);
   }
 
+  // TODO change api for each dimension
   // set input layer
   ERROR_CHECK(menoh_variable_profile_table_builder_add_input_profile_dims_4(
                   getModel(self)->vpt_builder, StringValuePtr(vinput_layer),
@@ -166,6 +170,23 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset, VALUE condition) {
                   getModel(self)->model_builder, getModel(self)->model_data,
                   StringValuePtr(vbackend), "", &(getModel(self)->model)),
               rb_eStandardError);
+
+  return Qnil;
+}
+
+static VALUE wrap_model_run(VALUE self, VALUE dataset) {
+  VALUE vbackend = getModel(self)->vbackend;
+  int32_t batch_size = getModel(self)->batch_size;
+  int32_t channel_num = getModel(self)->channel_num;
+  int32_t height = getModel(self)->height;
+  int32_t width = getModel(self)->width;
+  VALUE vinput_layer = getModel(self)->vinput_layer;
+  VALUE voutput_layers = getModel(self)->voutput_layers;
+
+  int32_t array_length = channel_num * width * height;
+  int32_t output_layer_num =
+      NUM2INT(rb_funcall(voutput_layers, rb_intern("length"), 0, NULL));
+
 
   // Copy input image data to model's input array
   for (int32_t i = 0; i < batch_size; i++) {
@@ -256,5 +277,5 @@ void Init_menoh_native() {
                            RUBY_METHOD_FUNC(wrap_model_init), 2);
 
   rb_define_private_method(model, "native_run",
-                           RUBY_METHOD_FUNC(wrap_model_run), 2);
+                           RUBY_METHOD_FUNC(wrap_model_run), 1);
 }

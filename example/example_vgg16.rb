@@ -31,32 +31,30 @@ CONV1_1_IN_NAME = '140326425860192'.freeze
 FC6_OUT_NAME = '140326200777584'.freeze
 SOFTMAX_OUT_NAME = '140326200803680'.freeze
 
-# conditions for model
+# model options for model
 model_opt = {
-  backend: 'mkldnn'
-}
-# make model for inference under 'condition'
-model = onnx_obj.make_model model_opt
-
-# conditions for input
-condition = {
+  backend: 'mkldnn',
+  batch_size: imagelist.length,
   channel_num: 3,
   height: 224,
   width: 224,
   input_layer: CONV1_1_IN_NAME,
   output_layers: [FC6_OUT_NAME, SOFTMAX_OUT_NAME]
 }
+# make model for inference under 'model_opt'
+model = onnx_obj.make_model model_opt
+
 # prepare dataset
 imageset = imagelist.map do |image_filepath|
   image = Magick::Image.read(image_filepath).first
-  image = image.resize_to_fill(condition[:width], condition[:height])
+  image = image.resize_to_fill(model_opt[:width], model_opt[:height])
   'RGB'.split('').map do |color|
     image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
   end.flatten
 end
 
 # execute inference
-results = model.run imageset, condition
+results = model.run imageset
 
 # load category definition
 categories = File.read('./data/synset_words.txt').split("\n")

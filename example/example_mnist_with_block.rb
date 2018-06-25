@@ -19,13 +19,10 @@ imagelist = [
 MNIST_IN_NAME = '139900320569040'.freeze
 MNIST_OUT_NAME = '139898462888656'.freeze
 
-# conditions for model
+# model options for model
 model_opt = {
-  backend: 'mkldnn'
-}
-
-# conditions for input
-condition = {
+  backend: 'mkldnn',
+  batch_size: imagelist.length,
   channel_num: 1,
   height: 28,
   width: 28,
@@ -40,21 +37,21 @@ Menoh::Menoh.new './data/mnist.onnx' do |onnx_obj|
     # prepare dataset
     imageset = imagelist.map do |image_filepath|
       image = Magick::Image.read(image_filepath).first
-      image = image.resize_to_fill(condition[:width], condition[:height])
+      image = image.resize_to_fill(model_opt[:width], model_opt[:height])
       image.export_pixels(0, 0, image.columns, image.rows, 'i').map { |pix| pix / 256 }
     end
     # execute inference
-    results = model.run imageset, condition
+    model.run imageset do |results|
+      categories = (0..9).to_a
+      TOP_K = 1
+      results.zip(imagelist).each do |result, image_filepath|
+        # sort by score
+        sorted_result = result[MNIST_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
 
-    categories = (0..9).to_a
-    TOP_K = 1
-    results.zip(imagelist).each do |result, image_filepath|
-      # sort by score
-      sorted_result = result[MNIST_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
-
-      # display result
-      sorted_result[0, TOP_K].each do |score, category|
-        puts "#{image_filepath} = #{category} : #{score}"
+        # display result
+        sorted_result[0, TOP_K].each do |score, category|
+          puts "#{image_filepath} = #{category} : #{score}"
+        end
       end
     end
   end
