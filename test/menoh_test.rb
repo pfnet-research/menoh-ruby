@@ -1,5 +1,6 @@
 require 'test_helper'
 
+MNIST_ONNX_FILE  = 'example/data/mnist.onnx'.freeze
 MNIST_IN_NAME = '139900320569040'.freeze
 MNIST_OUT_NAME = '139898462888656'.freeze
 
@@ -9,7 +10,7 @@ class MenohTest < Minitest::Test
   end
 
   def test_menoh_basic_function
-    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
+    onnx = Menoh::Menoh.new(MNIST_ONNX_FILE)
     assert_instance_of(Menoh::Menoh, onnx)
     batch_size = 3
     model_opt = {
@@ -23,10 +24,12 @@ class MenohTest < Minitest::Test
     }
     model = onnx.make_model(model_opt)
     assert_instance_of(Menoh::MenohModel, model)
-    imageset = (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
-    inference_results = model.run imageset
-    assert_instance_of(Array, inference_results)
-    assert_equal(batch_size, inference_results.length)
+    10.times do
+      imageset = (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
+      inference_results = model.run imageset
+      assert_instance_of(Array, inference_results)
+      assert_equal(batch_size, inference_results.length)
+    end
   end
 
   def test_menoh_basic_function_with_block
@@ -41,7 +44,7 @@ class MenohTest < Minitest::Test
       output_layers: [MNIST_OUT_NAME]
     }
     imageset = (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }
-    Menoh::Menoh.new('example/data/mnist.onnx') do |onnx|
+    Menoh::Menoh.new(MNIST_ONNX_FILE) do |onnx|
       assert_instance_of(Menoh::Menoh, onnx)
       onnx.make_model(model_opt) do |model|
         assert_instance_of(Menoh::MenohModel, model)
@@ -58,7 +61,7 @@ class MenohTest < Minitest::Test
   end
 
   def test_make_model_should_throw_when_the_option_is_invaild
-    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
+    onnx = Menoh::Menoh.new(MNIST_ONNX_FILE)
 
     # empty
     assert_raises { onnx.make_model({}) }
@@ -261,7 +264,7 @@ class MenohTest < Minitest::Test
   end
 
   def test_model_run_should_throw_when_input_option_is_invalid
-    onnx = Menoh::Menoh.new('example/data/mnist.onnx')
+    onnx = Menoh::Menoh.new(MNIST_ONNX_FILE)
     batch_size = 10
     model_opt = {
       backend: 'mkldnn',
