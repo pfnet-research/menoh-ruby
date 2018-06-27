@@ -189,7 +189,7 @@ class MenohTest < Minitest::Test
           }
         ],
         output_layers: [MNIST_OUT_NAME]
-        },
+      },
       {
         backend: 'mkldnn',
         input_layers: [
@@ -295,5 +295,4 @@ class MenohTest < Minitest::Test
       assert_raises { model.run(imageset) }
     end
   end
-
 end
