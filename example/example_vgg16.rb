@@ -1,7 +1,7 @@
 require 'open-uri'
 require 'rmagick'
 require 'menoh'
-
+# TODO revise api
 # download dependencies
 def download_file(url, output)
   return if File.exist? output
@@ -18,10 +18,15 @@ download_file('https://upload.wikimedia.org/wikipedia/commons/5/54/Light_sussex_
 download_file('https://upload.wikimedia.org/wikipedia/commons/f/fd/FoS20162016_0625_151036AA_%2827826100631%29.jpg', './data/honda_nsx.jpg')
 
 # load dataset
-imagelist = [
+image_list = [
   './data/Light_sussex_hen.jpg',
   './data/honda_nsx.jpg'
 ]
+input_shape = {
+  channel_num: 3,
+  width: 224,
+  height: 224
+}
 
 # load ONNX file
 onnx_obj = Menoh::Menoh.new './data/VGG16.onnx'
@@ -34,37 +39,48 @@ SOFTMAX_OUT_NAME = '140326200803680'.freeze
 # model options for model
 model_opt = {
   backend: 'mkldnn',
-  batch_size: imagelist.length,
-  channel_num: 3,
-  height: 224,
-  width: 224,
-  input_layer: CONV1_1_IN_NAME,
+  input_layers: [
+    {
+      name: CONV1_1_IN_NAME,
+      dims: [
+        image_list.length,
+        input_shape[:channel_num],
+        input_shape[:width],
+        input_shape[:height]
+      ]
+    }
+  ],
   output_layers: [FC6_OUT_NAME, SOFTMAX_OUT_NAME]
 }
 # make model for inference under 'model_opt'
 model = onnx_obj.make_model model_opt
 
 # prepare dataset
-imageset = imagelist.map do |image_filepath|
-  image = Magick::Image.read(image_filepath).first
-  image = image.resize_to_fill(model_opt[:width], model_opt[:height])
-  'RGB'.split('').map do |color|
-    image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
-  end.flatten
-end
+image_set = [
+  {
+    name: CONV1_1_IN_NAME,
+    data: image_list.map do |image_filepath|
+      image = Magick::Image.read(image_filepath).first
+      image = image.resize_to_fill(input_shape[:width], input_shape[:height])
+      'RGB'.split('').map do |color|
+        image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
+      end.flatten
+    end.flatten
+  }
+]
 
 # execute inference
-results = model.run imageset
+inferenced_results = model.run image_set
 
 # load category definition
 categories = File.read('./data/synset_words.txt').split("\n")
-
 TOP_K = 5
-results.zip(imagelist).each do |result, image_filepath|
+layer_result = inferenced_results.find { |x| x[:name] == SOFTMAX_OUT_NAME }
+layer_result[:data].zip(image_list).each do |image_result, image_filepath|
   puts "=== Result for #{image_filepath} ==="
 
   # sort by score
-  sorted_result = result[SOFTMAX_OUT_NAME].zip(categories).sort_by { |x| -x[0] }
+  sorted_result = image_result.zip(categories).sort_by { |x| -x[0] }
 
   # display result
   sorted_result[0, TOP_K].each do |score, category|
