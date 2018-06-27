@@ -24,7 +24,7 @@ SOFTMAX_OUT_NAME = '140326200803680'.freeze
 To build model, we load model data from ONNX file:
 
 ```ruby
-onnx_obj = Menoh::Menoh.new "./data/VGG16.onnx"
+onnx_obj = Menoh::Menoh.new './data/VGG16.onnx'
 ```
 
 Now let's build the model.
@@ -60,12 +60,12 @@ model = onnx_obj.make_model model_opt
 
 Before running the inference, the preprocessing of input dataset is required. `data/VGG16.onnx` takes 3 channels 224 x 224 sized image but input image is not always sized 224x224. So we use Imagemagick's `resize_to_fill` method for resizing.
 
-`VGG16.onnx`'s input layer *140326425860192* takes images as NCHW format (N x Channels x Height x Width). But RMagick's image array has alternately flatten values for each channel. So next we call `export_pixels` method for each channels `["R", "G", "B"]`, then `flatten` arrays.
+`VGG16.onnx`'s input layer *140326425860192* takes images as NCHW format (N x Channels x Height x Width). But RMagick's image array has alternately flatten values for each channel. So next we call `export_pixels` method for each channels `['R', 'G', 'B']`, then `flatten` arrays.
 
 ```ruby
 image_list = [
-  "./data/Light_sussex_hen.jpg",
-  "./data/honda_nsx.jpg",
+  './data/Light_sussex_hen.jpg',
+  './data/honda_nsx.jpg',
 ]
 image_set = [
   {
@@ -114,7 +114,6 @@ The `inferenced_results` is the array that contains the hash of results of `outp
 ```ruby
 fc6_out = inferenced_results.find { |x| x[:name] == FC6_OUT_NAME }
 softmax_out = inferenced_results.find { |x| x[:name] == SOFTMAX_OUT_NAME }
-end
 ```
 
 That's it.
