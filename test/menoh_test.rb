@@ -259,6 +259,7 @@ class MenohTest < Minitest::Test
         output_layers: ['invalid']
       }
     ]
+    # TODO test for menoh_variable_profile_table_builder_add_input_profile_dims_2
     etc_opts.each do |opt|
       assert_raises { onnx.make_model(opt) }
     end
