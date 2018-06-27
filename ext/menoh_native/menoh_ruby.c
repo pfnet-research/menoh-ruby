@@ -48,18 +48,15 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 typedef struct menohModel {
   menoh_model_data_handle model_data;
   VALUE vbackend;
-  float *input_buff;
+  float **input_buffs;
   float **output_buffs;
   menoh_variable_profile_table_builder_handle vpt_builder;
   menoh_variable_profile_table_handle variable_profile_table;
   menoh_model_builder_handle model_builder;
   menoh_model_handle model;
-  int32_t batch_size;
-  int32_t channel_num;
-  int32_t height;
-  int32_t width;
-  VALUE vinput_layer;
+  VALUE vinput_layers;
   VALUE voutput_layers;
+  int32_t input_layer_num;
 } menohModel;
 
 static menohModel *getModel(VALUE self) {
@@ -70,14 +67,19 @@ static menohModel *getModel(VALUE self) {
 
 static void wrap_model_free(menohModel *p) {
   if (p) {
-    if (p->input_buff) free(p->input_buff);
-    if (p->output_buffs) free(p->output_buffs);
-    if (p->model) menoh_delete_model(p->model);
-    if (p->model_builder) menoh_delete_model_builder(p->model_builder);
     if (p->variable_profile_table)
       menoh_delete_variable_profile_table(p->variable_profile_table);
     if (p->vpt_builder)
       menoh_delete_variable_profile_table_builder(p->vpt_builder);
+    if (p->model) menoh_delete_model(p->model);
+    if (p->model_builder) menoh_delete_model_builder(p->model_builder);
+    if (p->input_buffs){
+      for(int32_t i = 0; i < p->input_layer_num; i++){
+        if(p->input_buffs[i]) free(p->input_buffs[i]);
+      }
+      free(p->input_buffs);
+    }
+    if (p->output_buffs) free(p->output_buffs);
     ruby_xfree(p);
   }
 }
@@ -96,26 +98,13 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   getModel(self)->vbackend = vbackend;
 
   // option
-  int32_t batch_size = NUM2INT(
-      rb_hash_aref(option, rb_to_symbol(rb_str_new2("batch_size"))));
-  int32_t channel_num = NUM2INT(
-      rb_hash_aref(option, rb_to_symbol(rb_str_new2("channel_num"))));
-  int32_t height =
-      NUM2INT(rb_hash_aref(option, rb_to_symbol(rb_str_new2("height"))));
-  int32_t width =
-      NUM2INT(rb_hash_aref(option, rb_to_symbol(rb_str_new2("width"))));
-  VALUE vinput_layer =
-      rb_hash_aref(option, rb_to_symbol(rb_str_new2("input_layer")));
+  VALUE vinput_layers =
+      rb_hash_aref(option, rb_to_symbol(rb_str_new2("input_layers")));
   VALUE voutput_layers =
       rb_hash_aref(option, rb_to_symbol(rb_str_new2("output_layers")));
 
-  getModel(self)->batch_size = batch_size;
-  getModel(self)->channel_num = channel_num;
-  getModel(self)->height = height;
-  getModel(self)->width = width;
-  getModel(self)->vinput_layer = vinput_layer;
+  getModel(self)->vinput_layers = vinput_layers;
   getModel(self)->voutput_layers = voutput_layers;
-
 
   // get vpt builder
   ERROR_CHECK(
@@ -133,12 +122,28 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
                 rb_eStandardError);
   }
 
-  // TODO change api for each dimension
   // set input layer
-  ERROR_CHECK(menoh_variable_profile_table_builder_add_input_profile_dims_4(
-                  getModel(self)->vpt_builder, StringValuePtr(vinput_layer),
-                  menoh_dtype_float, batch_size, channel_num, width, height),
-              rb_eStandardError);
+  int32_t input_layer_num =
+      NUM2INT(rb_funcall(vinput_layers, rb_intern("length"), 0, NULL));
+  getModel(self)->input_layer_num = input_layer_num;
+  for (int32_t i = 0; i < input_layer_num; i++) {
+    VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
+    VALUE vname = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
+    VALUE vdims = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+    int32_t dims_length = NUM2INT(rb_funcall(vdims, rb_intern("length"), 0, NULL));
+
+    // TODO change api for each dimension
+    if(dims_length == 4){
+      ERROR_CHECK(menoh_variable_profile_table_builder_add_input_profile_dims_4(
+                      getModel(self)->vpt_builder, StringValuePtr(vname),
+                      menoh_dtype_float,
+                      NUM2INT(rb_ary_entry(vdims, 0)),
+                      NUM2INT(rb_ary_entry(vdims, 1)),
+                      NUM2INT(rb_ary_entry(vdims, 2)),
+                      NUM2INT(rb_ary_entry(vdims, 3))),
+                  rb_eStandardError);
+    }
+  }
 
   // build variable provile table
   ERROR_CHECK(menoh_build_variable_profile_table(
@@ -157,13 +162,24 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
               rb_eStandardError);
 
   // attach input buffer to model builder
-  getModel(self)->input_buff = (float *)malloc(sizeof(float) * batch_size *
-                                               channel_num * width * height);
+  getModel(self)->input_buffs = (float **)ruby_xmalloc(sizeof(float**) * input_layer_num);
+  for (int32_t i = 0; i < input_layer_num; i++) {
+    VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
+    VALUE vname = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
+    VALUE vdims = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+    int32_t dims_length = NUM2INT(rb_funcall(vdims, rb_intern("length"), 0, NULL));
 
-  ERROR_CHECK(menoh_model_builder_attach_external_buffer(
-                  getModel(self)->model_builder, StringValuePtr(vinput_layer),
-                  getModel(self)->input_buff),
-              rb_eStandardError);
+    // prepare input buffer
+    int32_t buffer_length = 1;
+    for(int32_t j = 0; j < dims_length; j++) buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
+
+    float* input_buff = (float *)ruby_xmalloc(sizeof(float) * buffer_length);
+    getModel(self)->input_buffs[i] = input_buff;
+    ERROR_CHECK(menoh_model_builder_attach_external_buffer(
+                    getModel(self)->model_builder, StringValuePtr(vname),
+                    input_buff),
+                rb_eStandardError);
+  }
 
   // build model
   ERROR_CHECK(menoh_build_model(
@@ -176,31 +192,32 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
 
 static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   VALUE vbackend = getModel(self)->vbackend;
-  int32_t batch_size = getModel(self)->batch_size;
-  int32_t channel_num = getModel(self)->channel_num;
-  int32_t height = getModel(self)->height;
-  int32_t width = getModel(self)->width;
-  VALUE vinput_layer = getModel(self)->vinput_layer;
+  VALUE vinput_layers = getModel(self)->vinput_layers;
   VALUE voutput_layers = getModel(self)->voutput_layers;
 
-  int32_t array_length = channel_num * width * height;
+  int32_t input_layer_num =
+      NUM2INT(rb_funcall(vinput_layers, rb_intern("length"), 0, NULL));
   int32_t output_layer_num =
       NUM2INT(rb_funcall(voutput_layers, rb_intern("length"), 0, NULL));
 
-
   // Copy input image data to model's input array
-  for (int32_t i = 0; i < batch_size; i++) {
+  for (int32_t i = 0; i < input_layer_num; i++) {
+    VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
+    VALUE vname = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
+    VALUE vdims = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+    int32_t dims_length = NUM2INT(rb_funcall(vdims, rb_intern("length"), 0, NULL));
+    int32_t buffer_length = 1;
+    for (int32_t j = 0; j < dims_length; j++) buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
+
     VALUE data = rb_ary_entry(dataset, i);
-    int32_t data_offset = i * array_length;
-    for (int32_t j = 0; j < array_length; ++j) {
-      getModel(self)->input_buff[data_offset + j] =
-          (float)(NUM2DBL(rb_ary_entry(data, j)));
+    for (int32_t j = 0; j < buffer_length; j++) {
+      getModel(self)->input_buffs[i][j] = (float)(NUM2DBL(rb_ary_entry(data, j)));
     }
   }
 
   // attach output buffer to model
   getModel(self)->output_buffs =
-      (float **)malloc(sizeof(float *) * output_layer_num);
+      (float **)ruby_xmalloc(sizeof(float *) * output_layer_num);
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     float *output_buff;
@@ -251,7 +268,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("name")), voutput_layer);
     rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("shape")),
                  vresult_shape);
-    rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("buffer")),
+    rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("data")),
                  vresult_buffer);
     rb_ary_push(results, result_each);
   }

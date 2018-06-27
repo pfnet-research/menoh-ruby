@@ -35,49 +35,50 @@ end
 module Menoh
   class MenohModel
     def initialize(menoh, option)
-      native_init menoh, option
-
-      %i[batch_size channel_num width height].each do |key|
-        raise "Required : #{key}" if option[key].nil?
-        raise "Invalid option : #{key}" unless option[key].integer? && (option[key] > 0)
-      end
-      raise 'Required : input_layer' if option[:input_layer].nil?
-      if !option[:input_layer].instance_of?(String) || option[:input_layer].empty?
-        raise 'Invalid option : input_layer'
+      raise 'Required : input_layers' if option[:input_layers].nil?
+      if option[:input_layers].nil? || option[:input_layers].empty?
+        option[:input_layers].each_with_index do |input_layer, i|
+          raise 'Invalid option : input_layers' unless input_layer.instance_of?(Hash)
+          raise "Need valid name for input_layer[#{i}]" unless input_layer[:name].instance_of?(String)
+          raise "Need valid dims for input_layer[#{i}]" unless input_layer[:dims].instance_of?(Array)
+        end
       end
       if option[:output_layers].nil? || option[:output_layers].empty?
         raise "Invalid ':output_layers'"
       end
+      native_init menoh, option
       @option = option
       yield self if block_given?
     end
 
     def run(dataset)
       raise 'Invalid dataset' if !dataset.instance_of?(Array) || dataset.empty?
-      expected_data_length = @option[:channel_num] * @option[:width] * @option[:height]
-      dataset.each do |data|
-        if data.length != expected_data_length
-          raise "Invalid data length: expected==#{expected_data_length} actual==#{data.length}"
+      if dataset.length != @option[:input_layers].length
+        raise "Invalid input num: expected==#{@option[:input_layers].length} actual==#{dataset.length}"
+      end
+      dataset_for_native = []
+      dataset.each do |input|
+        if !input[:data].instance_of?(Array) || input[:data].empty?
+          raise "Invalid dataset for layer #{input[:name]}"
         end
+        target_layer = @option[:input_layers].find { |item| item[:name] == input[:name] }
+        expected_data_length = target_layer[:dims].inject(:*)
+        if input[:data].length != expected_data_length
+          raise "Invalid data length: expected==#{expected_data_length} actual==#{input[:data].length}"
+        end
+        dataset_for_native << input[:data]
       end
 
       # run
-      raw_results = native_run dataset
+      results = native_run dataset_for_native
 
       # reshape result
-      raw_results.map do |raw|
-        buffer = raw[:buffer]
+      results.map do |raw|
+        buffer = raw[:data]
         shape = raw[:shape]
-        raw[:buffer] = transpose buffer, shape
+        raw[:data] = transpose buffer, shape
       end
-      results = []
-      dataset.length.times do |i|
-        result = {}
-        raw_results.each do |raw|
-          result[raw[:name]] = raw[:buffer][i]
-        end
-        results << result
-      end
+
       yield results if block_given?
       results
     end
