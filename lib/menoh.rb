@@ -35,13 +35,14 @@ end
 module Menoh
   class MenohModel
     def initialize(menoh, option)
-      raise 'Required : input_layers' if option[:input_layers].nil?
       if option[:input_layers].nil? || option[:input_layers].empty?
-        option[:input_layers].each_with_index do |input_layer, i|
-          raise 'Invalid option : input_layers' unless input_layer.instance_of?(Hash)
-          raise "Need valid name for input_layer[#{i}]" unless input_layer[:name].instance_of?(String)
-          raise "Need valid dims for input_layer[#{i}]" unless input_layer[:dims].instance_of?(Array)
-        end
+        raise 'Required : input_layers'
+      end
+      raise 'Required : input_layers' unless option[:input_layers].instance_of?(Array)
+      option[:input_layers].each_with_index do |input_layer, i|
+        raise 'Invalid option : input_layers' unless input_layer.instance_of?(Hash)
+        raise "Need valid name for input_layer[#{i}]" unless input_layer[:name].instance_of?(String)
+        raise "Need valid dims for input_layer[#{i}]" unless input_layer[:dims].instance_of?(Array)
       end
       if option[:output_layers].nil? || option[:output_layers].empty?
         raise "Invalid ':output_layers'"
