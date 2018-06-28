@@ -84,10 +84,18 @@ static void wrap_model_free(menohModel *p) {
   }
 }
 
+static void wrap_model_mark(menohModel *p) {
+  if (p) {
+    if (p->vbackend) rb_gc_mark(p->vbackend);
+    if (p->vinput_layers) rb_gc_mark(p->vinput_layers);
+    if (p->voutput_layers) rb_gc_mark(p->voutput_layers);
+  }
+}
+
 static VALUE wrap_model_alloc(VALUE klass) {
   void *p = ruby_xmalloc(sizeof(menohModel));
   memset(p, 0, sizeof(menohModel));
-  return Data_Wrap_Struct(klass, NULL, wrap_model_free, p);
+  return Data_Wrap_Struct(klass, wrap_model_mark, wrap_model_free, p);
 }
 
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
