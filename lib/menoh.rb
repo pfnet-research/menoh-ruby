@@ -13,8 +13,8 @@ module Menoh
     end
 
     def make_model(option)
-      if option[:backend].nil? || (option[:backend] != 'mkldnn')
-        raise "Invalid ':backend' : #{option[:backend]}"
+      if option[:backend].nil?
+        raise "Required ':backend' : #{option[:backend]}"
       end
       model = MenohModel.new self, option
       yield model if block_given?
@@ -36,13 +36,13 @@ module Menoh
   class MenohModel
     def initialize(menoh, option)
       if option[:input_layers].nil? || option[:input_layers].empty?
-        raise 'Required : input_layers'
+        raise "Required ':input_layers'"
       end
-      raise 'Required : input_layers' unless option[:input_layers].instance_of?(Array)
+      raise "Required ':input_layers'" unless option[:input_layers].instance_of?(Array)
       option[:input_layers].each_with_index do |input_layer, i|
         raise 'Invalid option : input_layers' unless input_layer.instance_of?(Hash)
-        raise "Need valid name for input_layer[#{i}]" unless input_layer[:name].instance_of?(String)
-        raise "Need valid dims for input_layer[#{i}]" unless input_layer[:dims].instance_of?(Array)
+        raise "Invalid name for input_layer[#{i}]" unless input_layer[:name].instance_of?(String)
+        raise "Invalid dims for input_layer[#{i}]" unless input_layer[:dims].instance_of?(Array)
       end
       if option[:output_layers].nil? || option[:output_layers].empty?
         raise "Invalid ':output_layers'"
