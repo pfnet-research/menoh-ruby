@@ -34,7 +34,7 @@ static VALUE wrap_menoh_alloc(VALUE klass) {
 
 static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
   menoh_error_code ec = menoh_error_code_success;
-  char *filename = StringValuePtr(vfilename);
+  char *filename = StringValueCStr(vfilename);
 
   // Load ONNX model
   menoh_model_data_handle model_data;
@@ -124,7 +124,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     ERROR_CHECK(menoh_variable_profile_table_builder_add_output_profile(
-                    getModel(self)->vpt_builder, StringValuePtr(voutput_layer),
+                    getModel(self)->vpt_builder, StringValueCStr(voutput_layer),
                     menoh_dtype_float),
                 rb_eStandardError);
   }
@@ -144,7 +144,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
       case 2:
         ERROR_CHECK(
             menoh_variable_profile_table_builder_add_input_profile_dims_2(
-                getModel(self)->vpt_builder, StringValuePtr(vname),
+                getModel(self)->vpt_builder, StringValueCStr(vname),
                 menoh_dtype_float, NUM2INT(rb_ary_entry(vdims, 0)),
                 NUM2INT(rb_ary_entry(vdims, 1))),
             rb_eStandardError);
@@ -152,7 +152,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
       case 4:
         ERROR_CHECK(
             menoh_variable_profile_table_builder_add_input_profile_dims_4(
-                getModel(self)->vpt_builder, StringValuePtr(vname),
+                getModel(self)->vpt_builder, StringValueCStr(vname),
                 menoh_dtype_float, NUM2INT(rb_ary_entry(vdims, 0)),
                 NUM2INT(rb_ary_entry(vdims, 1)),
                 NUM2INT(rb_ary_entry(vdims, 2)),
@@ -202,14 +202,14 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
       getModel(self)->input_buffs[i] = input_buff;
       ERROR_CHECK(
           menoh_model_builder_attach_external_buffer(
-              getModel(self)->model_builder, StringValuePtr(vname), input_buff),
+              getModel(self)->model_builder, StringValueCStr(vname), input_buff),
           rb_eStandardError);
     }
 
     // build model
     ERROR_CHECK(menoh_build_model(
                     getModel(self)->model_builder, getModel(self)->model_data,
-                    StringValuePtr(vbackend), "", &(getModel(self)->model)),
+                    StringValueCStr(vbackend), "", &(getModel(self)->model)),
                 rb_eStandardError);
 
     return Qnil;
@@ -251,7 +251,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     float *output_buff;
     ERROR_CHECK(menoh_model_get_variable_buffer_handle(
-                    getModel(self)->model, StringValuePtr(voutput_layer),
+                    getModel(self)->model, StringValueCStr(voutput_layer),
                     (void **)&output_buff),
                 rb_eStandardError);
     getModel(self)->output_buffs[i] = output_buff;
@@ -272,7 +272,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     int32_t output_buffer_length = 1;
     ERROR_CHECK(menoh_variable_profile_table_get_dims_size(
                     getModel(self)->variable_profile_table,
-                    StringValuePtr(voutput_layer), &(dim_size)),
+                    StringValueCStr(voutput_layer), &(dim_size)),
                 rb_eStandardError);
     VALUE vresult_shape = rb_ary_new();
     // get each size of dimention
@@ -280,7 +280,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
       int32_t size;
       ERROR_CHECK(menoh_variable_profile_table_get_dims_at(
                       getModel(self)->variable_profile_table,
-                      StringValuePtr(voutput_layer), dim, &(size)),
+                      StringValueCStr(voutput_layer), dim, &(size)),
                   rb_eStandardError);
       rb_ary_push(vresult_shape, INT2NUM(size));
       output_buffer_length *= size;
