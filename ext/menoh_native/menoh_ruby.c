@@ -34,7 +34,8 @@ static VALUE wrap_menoh_alloc(VALUE klass) {
 
 static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
   menoh_error_code ec = menoh_error_code_success;
-  char *filename = FilePathValue(vfilename);
+  FilePathValue(vfilename);
+  char *filename = StringValueCStr(vfilename);
 
   // Load ONNX model
   menoh_model_data_handle model_data;
