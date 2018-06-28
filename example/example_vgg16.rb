@@ -62,7 +62,7 @@ image_set = [
     data: image_list.map do |image_filepath|
       image = Magick::Image.read(image_filepath).first
       image = image.resize_to_fill(input_shape[:width], input_shape[:height])
-      'RGB'.split('').map do |color|
+      'BGR'.split('').map do |color|
         image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
       end.flatten
     end.flatten
