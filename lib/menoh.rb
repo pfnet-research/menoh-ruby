@@ -4,7 +4,7 @@ require 'menoh/menoh_native'
 module Menoh
   class Menoh
     def initialize(file)
-      if !file.instance_of?(String) || !File.exist?(file)
+      if !File.exist?(file)
         raise "No such file : #{file}"
       end
 
