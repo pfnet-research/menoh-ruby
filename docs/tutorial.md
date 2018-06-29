@@ -60,7 +60,7 @@ model = onnx_obj.make_model model_opt
 
 Before running the inference, the preprocessing of input dataset is required. `data/VGG16.onnx` takes 3 channels 224 x 224 sized image but input image is not always sized 224x224. So we use Imagemagick's `resize_to_fill` method for resizing.
 
-`VGG16.onnx`'s input layer *140326425860192* takes images as NCHW format (N x Channels x Height x Width). But RMagick's image array has alternately flatten values for each channel. So next we call `export_pixels` method for each channels `['R', 'G', 'B']`, then `flatten` arrays.
+`VGG16.onnx`'s input layer *140326425860192* takes images as NCHW format (N x Channels x Height x Width). But RMagick's image array has alternately flatten values for each channel. So next we call `export_pixels` method for each channels `['B', 'G', 'R']`, then `flatten` arrays.
 
 ```ruby
 image_list = [
@@ -73,7 +73,7 @@ image_set = [
     data: image_list.map do |image_filepath|
       image = Magick::Image.read(image_filepath).first
       image = image.resize_to_fill(input_shape[:width], input_shape[:height])
-      'RGB'.split('').map do |color|
+      'BGR'.split('').map do |color|
         image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
       end.flatten
     end.flatten
@@ -92,7 +92,7 @@ image_set = [
     data: image_list.map do |image_filepath|
       image = Magick::Image.read(image_filepath).first
       image = image.resize_to_fill(input_shape[:width], input_shape[:height])
-      'RGB'.split('').map do |color|
+      'BGR'.split('').map do |color|
         image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 65536 }
       end.flatten
     end.flatten
