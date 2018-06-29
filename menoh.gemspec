@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = "Ruby binding of ONNX runtime engine 'Menoh'"
   spec.description   = "Ruby binding of ONNX runtime engine 'Menoh'"
-  spec.homepage      = 'https://github.com/colspan/menoh-ruby'
+  spec.homepage      = 'https://github.com/pfnet-research/menoh-ruby'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject do |f|
