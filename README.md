@@ -29,7 +29,7 @@ Or install it yourself as:
 ## Usage
 
 Please see [Menoh tutorial](https://github.com/pfnet-research/menoh/blob/master/docs/tutorial.md) and [menoh-ruby tutorial](https://github.com/pfnet-research/menoh-ruby/blob/master/docs/tutorial.md).
-And we have [some examples](https://github.com/pfnet-research/menoh/blob/master/example/) on this repository.
+And we have [some examples](https://github.com/pfnet-research/menoh-ruby/blob/master/example/) on this repository.
 
 ## Development
 
