@@ -7,7 +7,7 @@ def download_file(url, output)
   return if File.exist? output
   puts "downloading... #{url}"
   File.open(output, 'wb') do |f_output|
-    File.open(url, 'rb') do |f_input|
+    open(url, 'rb') do |f_input|
       f_output.write f_input.read
     end
   end
