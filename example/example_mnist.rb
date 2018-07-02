@@ -36,8 +36,8 @@ model_opt = {
       dims: [
         image_list.length,
         input_shape[:channel_num],
+        input_shape[:height],
         input_shape[:width],
-        input_shape[:height]
       ]
     }
   ],
