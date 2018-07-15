@@ -1,7 +1,7 @@
 require 'open-uri'
 require 'rmagick'
 require 'menoh'
-# TODO revise api
+
 # download dependencies
 def download_file(url, output)
   return if File.exist? output
