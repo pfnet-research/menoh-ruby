@@ -4,35 +4,20 @@ require 'menoh/menoh_native'
 module Menoh
   class Menoh
     def initialize(file)
-      if !File.exist?(file)
-        raise "No such file : #{file}"
-      end
+      raise "No such file : #{file}" unless File.exist?(file)
 
       native_init file
       yield self if block_given?
     end
 
     def make_model(option)
-      if option[:backend].nil?
-        raise "Required ':backend' : #{option[:backend]}"
-      end
+      raise "Required ':backend' : #{option[:backend]}" if option[:backend].nil?
       model = MenohModel.new self, option
       yield model if block_given?
       model
     end
   end
-end
 
-def reshape(buffer, shape)
-  sliced_buffer = buffer.each_slice(buffer.length / shape[0]).to_a
-  if shape.length > 2
-    next_shape = shape.slice(1, shape.length)
-    sliced_buffer = sliced_buffer.map { |buf| reshape buf, next_shape }
-  end
-  sliced_buffer
-end
-
-module Menoh
   class MenohModel
     def initialize(menoh, option)
       if option[:input_layers].nil? || option[:input_layers].empty?
@@ -77,11 +62,22 @@ module Menoh
       results.map do |raw|
         buffer = raw[:data]
         shape = raw[:shape]
-        raw[:data] = reshape buffer, shape
+        raw[:data] = Util.reshape buffer, shape
       end
 
       yield results if block_given?
       results
+    end
+  end
+
+  module Util
+    def self.reshape(buffer, shape)
+      sliced_buffer = buffer.each_slice(buffer.length / shape[0]).to_a
+      if shape.length > 2
+        next_shape = shape.slice(1, shape.length)
+        sliced_buffer = sliced_buffer.map { |buf| reshape buf, next_shape }
+      end
+      sliced_buffer
     end
   end
 end

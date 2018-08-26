@@ -298,17 +298,17 @@ class MenohTest < Minitest::Test
   end
 
   def test_reshape
-    assert_equal([[0], [1], [2], [3]], reshape([0, 1, 2, 3], [4, 1]))
-    assert_equal([[0, 1], [2, 3]], reshape([0, 1, 2, 3], [2, 2]))
-    assert_equal([[0, 1, 2, 3]], reshape([0, 1, 2, 3], [1, 4]))
-    assert_equal([[[0, 1], [2, 3]]], reshape([0, 1, 2, 3], [1, 2, 2]))
+    assert_equal([[0], [1], [2], [3]], Menoh::Util.reshape([0, 1, 2, 3], [4, 1]))
+    assert_equal([[0, 1], [2, 3]], Menoh::Util.reshape([0, 1, 2, 3], [2, 2]))
+    assert_equal([[0, 1, 2, 3]], Menoh::Util.reshape([0, 1, 2, 3], [1, 4]))
+    assert_equal([[[0, 1], [2, 3]]], Menoh::Util.reshape([0, 1, 2, 3], [1, 2, 2]))
     assert_equal([
                    [
                      [0, 1, 2, 3],
                      [4, 5, 6, 7]
                    ]
                  ],
-                 reshape([0, 1, 2, 3, 4, 5, 6, 7],
+                 Menoh::Util.reshape([0, 1, 2, 3, 4, 5, 6, 7],
                          [1, 2, 4]))
     assert_equal([
                    [
@@ -320,7 +320,7 @@ class MenohTest < Minitest::Test
                      [6, 7]
                    ]
                  ],
-                 reshape([0, 1, 2, 3, 4, 5, 6, 7],
+                 Menoh::Util.reshape([0, 1, 2, 3, 4, 5, 6, 7],
                          [2, 2, 2]))
   end
 end
