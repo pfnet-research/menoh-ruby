@@ -23,11 +23,11 @@ module Menoh
   end
 end
 
-def transpose(buffer, shape)
+def reshape(buffer, shape)
   sliced_buffer = buffer.each_slice(buffer.length / shape[0]).to_a
   if shape.length > 2
     next_shape = shape.slice(1, shape.length)
-    sliced_buffer = sliced_buffer.map { |buf| transpose buf, next_shape }
+    sliced_buffer = sliced_buffer.map { |buf| reshape buf, next_shape }
   end
   sliced_buffer
 end
@@ -77,7 +77,7 @@ module Menoh
       results.map do |raw|
         buffer = raw[:data]
         shape = raw[:shape]
-        raw[:data] = transpose buffer, shape
+        raw[:data] = reshape buffer, shape
       end
 
       yield results if block_given?
