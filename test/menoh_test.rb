@@ -259,7 +259,7 @@ class MenohTest < Minitest::Test
         output_layers: ['invalid']
       }
     ]
-    # TODO test for menoh_variable_profile_table_builder_add_input_profile_dims_2
+    # TODO: test for menoh_variable_profile_table_builder_add_input_profile_dims_2
     etc_opts.each do |opt|
       assert_raises { onnx.make_model(opt) }
     end
@@ -295,5 +295,32 @@ class MenohTest < Minitest::Test
       }
       assert_raises { model.run(imageset) }
     end
+  end
+
+  def test_reshape
+    assert_equal([[0], [1], [2], [3]], Menoh::Util.reshape([0, 1, 2, 3], [4, 1]))
+    assert_equal([[0, 1], [2, 3]], Menoh::Util.reshape([0, 1, 2, 3], [2, 2]))
+    assert_equal([[0, 1, 2, 3]], Menoh::Util.reshape([0, 1, 2, 3], [1, 4]))
+    assert_equal([[[0, 1], [2, 3]]], Menoh::Util.reshape([0, 1, 2, 3], [1, 2, 2]))
+    assert_equal([
+                   [
+                     [0, 1, 2, 3],
+                     [4, 5, 6, 7]
+                   ]
+                 ],
+                 Menoh::Util.reshape([0, 1, 2, 3, 4, 5, 6, 7],
+                         [1, 2, 4]))
+    assert_equal([
+                   [
+                     [0, 1],
+                     [2, 3]
+                   ],
+                   [
+                     [4, 5],
+                     [6, 7]
+                   ]
+                 ],
+                 Menoh::Util.reshape([0, 1, 2, 3, 4, 5, 6, 7],
+                         [2, 2, 2]))
   end
 end
