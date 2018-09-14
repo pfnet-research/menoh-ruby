@@ -164,57 +164,57 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
         rb_raise(rb_eStandardError, "invalid dimension length");
         return Qnil;
     }
-
-    // build variable provile table
-    ERROR_CHECK(menoh_build_variable_profile_table(
-                    getModel(self)->vpt_builder, getModel(self)->model_data,
-                    &(getModel(self)->variable_profile_table)),
-                rb_eStandardError);
-
-    // optimize
-    ERROR_CHECK(
-        menoh_model_data_optimize(getModel(self)->model_data,
-                                  getModel(self)->variable_profile_table),
-        rb_eStandardError);
-
-    // get model buildler
-    ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table,
-                                         &(getModel(self)->model_builder)),
-                rb_eStandardError);
-
-    // attach input buffer to model builder
-    getModel(self)->input_buffs =
-        (float **)ruby_xmalloc(sizeof(float **) * input_layer_num);
-    for (int32_t i = 0; i < input_layer_num; i++) {
-      VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
-      VALUE vname =
-          rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
-      VALUE vdims =
-          rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
-      int32_t dims_length =
-          NUM2INT(rb_funcall(vdims, rb_intern("length"), 0, NULL));
-
-      // prepare input buffer
-      int32_t buffer_length = 1;
-      for (int32_t j = 0; j < dims_length; j++)
-        buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
-
-      float *input_buff = (float *)ruby_xmalloc(sizeof(float) * buffer_length);
-      getModel(self)->input_buffs[i] = input_buff;
-      ERROR_CHECK(
-          menoh_model_builder_attach_external_buffer(
-              getModel(self)->model_builder, StringValueCStr(vname), input_buff),
-          rb_eStandardError);
-    }
-
-    // build model
-    ERROR_CHECK(menoh_build_model(
-                    getModel(self)->model_builder, getModel(self)->model_data,
-                    StringValueCStr(vbackend), "", &(getModel(self)->model)),
-                rb_eStandardError);
-
-    return Qnil;
   }
+
+  // build variable provile table
+  ERROR_CHECK(menoh_build_variable_profile_table(
+                  getModel(self)->vpt_builder, getModel(self)->model_data,
+                  &(getModel(self)->variable_profile_table)),
+              rb_eStandardError);
+
+  // optimize
+  ERROR_CHECK(
+      menoh_model_data_optimize(getModel(self)->model_data,
+                                getModel(self)->variable_profile_table),
+      rb_eStandardError);
+
+  // get model buildler
+  ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table,
+                                        &(getModel(self)->model_builder)),
+              rb_eStandardError);
+
+  // attach input buffer to model builder
+  getModel(self)->input_buffs =
+      (float **)ruby_xmalloc(sizeof(float **) * input_layer_num);
+  for (int32_t i = 0; i < input_layer_num; i++) {
+    VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
+    VALUE vname =
+        rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
+    VALUE vdims =
+        rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+    int32_t dims_length =
+        NUM2INT(rb_funcall(vdims, rb_intern("length"), 0, NULL));
+
+    // prepare input buffer
+    int32_t buffer_length = 1;
+    for (int32_t j = 0; j < dims_length; j++)
+      buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
+
+    float *input_buff = (float *)ruby_xmalloc(sizeof(float) * buffer_length);
+    getModel(self)->input_buffs[i] = input_buff;
+    ERROR_CHECK(
+        menoh_model_builder_attach_external_buffer(
+            getModel(self)->model_builder, StringValueCStr(vname), input_buff),
+        rb_eStandardError);
+  }
+
+  // build model
+  ERROR_CHECK(menoh_build_model(
+                  getModel(self)->model_builder, getModel(self)->model_data,
+                  StringValueCStr(vbackend), "", &(getModel(self)->model)),
+              rb_eStandardError);
+
+  return Qnil;
 }
 
 static VALUE wrap_model_run(VALUE self, VALUE dataset) {
