@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name          = 'menoh'
   spec.version       = Menoh::VERSION
   spec.authors       = ['Kunihiko MIYOSHI']
-  spec.email         = ['miyoshik@preferred.jp']
+  spec.email         = ['menoh-oss@preferred.jp']
 
   spec.summary       = "Ruby binding of ONNX runtime engine 'Menoh'"
   spec.description   = "Ruby binding of ONNX runtime engine 'Menoh'"
