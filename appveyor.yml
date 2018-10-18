@@ -1,0 +1,33 @@
+platform:
+  - x64
+environment:
+  global:
+    MKL_DNN_VERSION: 0.16
+    MKL_DNN_REL: 3
+    MENOH_VERSION: 1.1.1
+    MENOH_REL: 1
+  matrix:
+    - RUBY_VERSION: 25-x64
+install:
+  - ps: |
+      $env:PATH = "C:\msys64\mingw64\bin;C:\msys64\usr\bin;" + $env:PATH
+      Invoke-WebRequest `
+          -Uri https://github.com/pfnet-research/menoh/releases/download/v1.1.0/mingw-w64-x86_64-mkl-dnn-$env:MKL_DNN_VERSION-$env:MKL_DNN_REL-x86_64.pkg.tar.xz `
+          -OutFile mingw-w64-x86_64-mkl-dnn-$env:MKL_DNN_VERSION-$env:MKL_DNN_REL-x86_64.pkg.tar.xz
+      pacman.exe -U --noconfirm mingw-w64-x86_64-mkl-dnn-$env:MKL_DNN_VERSION-$env:MKL_DNN_REL-x86_64.pkg.tar.xz
+      Invoke-WebRequest `
+          -Uri https://github.com/pfnet-research/menoh/releases/download/v$env:MENOH_VERSION/mingw-w64-x86_64-menoh-$env:MENOH_VERSION-$env:MENOH_REL-x86_64.pkg.tar.xz `
+          -OutFile mingw-w64-x86_64-menoh-$env:MENOH_VERSION-$env:MENOH_REL-x86_64.pkg.tar.xz
+      pacman.exe -U --noconfirm mingw-w64-x86_64-menoh-$env:MENOH_VERSION-$env:MENOH_REL-x86_64.pkg.tar.xz
+  - ps: $env:PATH = "C:\Ruby$env:RUBY_VERSION\bin;" + $env:PATH
+  - bundle install
+
+build: off
+
+before_test:
+  - ruby -v
+  - gem -v
+  - bundle -v
+
+test_script:
+  - bundle exec rake
