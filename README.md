@@ -1,5 +1,7 @@
 # Menoh Ruby Extension 
 
+[![Build status (AppVeyor)](https://ci.appveyor.com/api/projects/status/reowah7bx31vep7o?svg=true)](https://ci.appveyor.com/project/pfnet-research/menoh-ruby)
+
 This is a Ruby extension of [Menoh](https://github.com/pfnet-research/menoh); an ONNX runtime engine developed by [@okdshin](https://github.com/okdshin) and their team [@pfnet-research](https://github.com/pfnet-research).
 
 ## Installation
