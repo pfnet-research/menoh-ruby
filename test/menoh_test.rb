@@ -227,16 +227,17 @@ class MenohTest < Minitest::Test
 
     etc_opts = [
       ## invalid image size
-      {
-        backend: 'mkldnn',
-        input_layers: [
-          {
-            name: MNIST_IN_NAME,
-            dims: [10, 1, 28, 128]
-          }
-        ],
-        output_layers: [MNIST_OUT_NAME]
-      },
+      # # omit this test because Menoh accepts any size
+      # {
+      #   backend: 'mkldnn',
+      #   input_layers: [
+      #     {
+      #       name: MNIST_IN_NAME,
+      #       dims: [10, 1, 28, 128]
+      #     }
+      #   ],
+      #   output_layers: [MNIST_OUT_NAME]
+      # },
       ## onnx doesn't have name
       {
         backend: 'mkldnn',
