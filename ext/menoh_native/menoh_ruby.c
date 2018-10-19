@@ -128,9 +128,8 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
       NUM2INT(rb_funcall(voutput_layers, rb_intern("length"), 0, NULL));
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
-    ERROR_CHECK(menoh_variable_profile_table_builder_add_output_profile(
-                    getModel(self)->vpt_builder, StringValueCStr(voutput_layer),
-                    menoh_dtype_float),
+    ERROR_CHECK(menoh_variable_profile_table_builder_add_output_name(
+                    getModel(self)->vpt_builder, StringValueCStr(voutput_layer)),
                 rb_eStandardError);
   }
 
