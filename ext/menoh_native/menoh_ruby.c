@@ -76,11 +76,11 @@ static void wrap_model_free(menohModel *p) {
     if (p->model_builder) menoh_delete_model_builder(p->model_builder);
     if (p->input_buffs) {
       for (int32_t i = 0; i < p->input_layer_num; i++) {
-        if (p->input_buffs[i]) ruby_xfree(p->input_buffs[i]);
+        ruby_xfree(p->input_buffs[i]);
       }
-      ruby_xfree(p->input_buffs);
     }
-    if (p->output_buffs) ruby_xfree(p->output_buffs);
+    ruby_xfree(p->input_buffs);
+    ruby_xfree(p->output_buffs);
     ruby_xfree(p);
   }
 }
