@@ -49,7 +49,6 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 typedef struct menohModel {
   menoh_model_data_handle model_data;
   VALUE vbackend;
-  int32_t *dims;
   float **input_buffs;
   float **output_buffs;
   menoh_variable_profile_table_builder_handle vpt_builder;
@@ -69,9 +68,6 @@ static menohModel *getModel(VALUE self) {
 
 static void wrap_model_free(menohModel *p) {
   if (p) {
-    if (p->dims) {
-      ruby_xfree(p->dims);
-    }
     if (p->variable_profile_table)
       menoh_delete_variable_profile_table(p->variable_profile_table);
     if (p->vpt_builder)
@@ -144,16 +140,16 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
     int32_t dims_length =
         NUM2INT(rb_funcall(vdims, rb_intern("length"), 0, NULL));
 
-    getModel(self)->dims = (int32_t *)ruby_xmalloc(sizeof(int32_t) * dims_length);
+    int32_t *dims = (int32_t *)alloca(sizeof(int32_t) * dims_length);
     for (int32_t j = 0; j < dims_length; j++){
-      getModel(self)->dims[j] = NUM2INT(rb_ary_entry(vdims, j));
+      dims[j] = NUM2INT(rb_ary_entry(vdims, j));
     }
     ERROR_CHECK(
         menoh_variable_profile_table_builder_add_input_profile(
             getModel(self)->vpt_builder, StringValueCStr(vname),
             menoh_dtype_float,
             dims_length,
-            getModel(self)->dims),
+            dims),
         rb_eStandardError);
   }
 
