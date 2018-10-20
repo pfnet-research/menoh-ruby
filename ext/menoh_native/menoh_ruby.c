@@ -22,8 +22,8 @@ static menoh_ruby *getONNX(VALUE self) {
 static void wrap_menoh_free(menoh_ruby *p) {
   if (p) {
     if (p->model_data) menoh_delete_model_data(p->model_data);
-    ruby_xfree(p);
   }
+  ruby_xfree(p);
 }
 
 static VALUE wrap_menoh_alloc(VALUE klass) {
