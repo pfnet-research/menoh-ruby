@@ -33,7 +33,6 @@ static VALUE wrap_menoh_alloc(VALUE klass) {
 }
 
 static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
-  menoh_error_code ec = menoh_error_code_success;
   FilePathValue(vfilename);
   char *filename = StringValueCStr(vfilename);
 
@@ -205,7 +204,6 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
 }
 
 static VALUE wrap_model_run(VALUE self, VALUE dataset) {
-  VALUE vbackend = getModel(self)->vbackend;
   VALUE vinput_layers = getModel(self)->vinput_layers;
   VALUE voutput_layers = getModel(self)->voutput_layers;
 
@@ -217,7 +215,6 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   // Copy input image data to model's input array
   for (int32_t i = 0; i < input_layer_num; i++) {
     VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
-    VALUE vname = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
     VALUE vdims = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
     int32_t dims_length =
         NUM2INT(rb_funcall(vdims, rb_intern("length"), 0));
