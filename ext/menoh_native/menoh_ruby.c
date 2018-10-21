@@ -290,10 +290,8 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   return results;
 }
 
-VALUE mMenoh;
-
 void Init_menoh_native() {
-  mMenoh = rb_define_module("Menoh");
+  VALUE mMenoh = rb_define_module("Menoh");
 
   VALUE onnx = rb_define_class_under(mMenoh, "Menoh", rb_cObject);
 
