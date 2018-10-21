@@ -13,7 +13,8 @@ typedef struct menoh_ruby {
   menoh_model_data_handle model_data;
 } menoh_ruby;
 
-static ID id_length;
+static ID id_backend, id_input_layers, id_output_layers;
+static ID id_data, id_dims, id_length, id_name, id_shape;
 
 static menoh_ruby *getONNX(VALUE self) {
   menoh_ruby *p;
@@ -103,14 +104,14 @@ static VALUE wrap_model_alloc(VALUE klass) {
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // option
   getModel(self)->model_data = getONNX(vonnx)->model_data;
-  VALUE vbackend = rb_hash_aref(option, rb_to_symbol(rb_str_new2("backend")));
+  VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
   getModel(self)->vbackend = vbackend;
 
   // option
   VALUE vinput_layers =
-      rb_hash_aref(option, rb_to_symbol(rb_str_new2("input_layers")));
+      rb_hash_aref(option, ID2SYM(id_input_layers));
   VALUE voutput_layers =
-      rb_hash_aref(option, rb_to_symbol(rb_str_new2("output_layers")));
+      rb_hash_aref(option, ID2SYM(id_output_layers));
 
   getModel(self)->vinput_layers = vinput_layers;
   getModel(self)->voutput_layers = voutput_layers;
@@ -136,8 +137,8 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   getModel(self)->input_layer_num = input_layer_num;
   for (int32_t i = 0; i < input_layer_num; i++) {
     VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
-    VALUE vname = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
-    VALUE vdims = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+    VALUE vname = rb_hash_aref(vinput_layer, ID2SYM(id_name));
+    VALUE vdims = rb_hash_aref(vinput_layer, ID2SYM(id_dims));
     int32_t dims_length =
         NUM2INT(rb_funcall(vdims, id_length, 0));
 
@@ -177,9 +178,9 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   for (int32_t i = 0; i < input_layer_num; i++) {
     VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
     VALUE vname =
-        rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("name")));
+        rb_hash_aref(vinput_layer, ID2SYM(id_name));
     VALUE vdims =
-        rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+        rb_hash_aref(vinput_layer, ID2SYM(id_dims));
     int32_t dims_length =
         NUM2INT(rb_funcall(vdims, id_length, 0));
 
@@ -217,7 +218,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   // Copy input image data to model's input array
   for (int32_t i = 0; i < input_layer_num; i++) {
     VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
-    VALUE vdims = rb_hash_aref(vinput_layer, rb_to_symbol(rb_str_new2("dims")));
+    VALUE vdims = rb_hash_aref(vinput_layer, ID2SYM(id_dims));
     int32_t dims_length =
         NUM2INT(rb_funcall(vdims, id_length, 0));
     int32_t buffer_length = 1;
@@ -281,10 +282,10 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
       rb_ary_push(vresult_buffer, DBL2NUM(*(output_buff + j)));
     }
 
-    rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("name")), voutput_layer);
-    rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("shape")),
+    rb_hash_aset(result_each, ID2SYM(id_name), voutput_layer);
+    rb_hash_aset(result_each, ID2SYM(id_shape),
                  vresult_shape);
-    rb_hash_aset(result_each, rb_to_symbol(rb_str_new2("data")),
+    rb_hash_aset(result_each, ID2SYM(id_data),
                  vresult_buffer);
     rb_ary_push(results, result_each);
   }
@@ -293,7 +294,14 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
 }
 
 void Init_menoh_native() {
+  id_backend = rb_intern("backend");
+  id_input_layers = rb_intern("input_layers");
+  id_output_layers = rb_intern("output_layers");
+  id_data = rb_intern("data");
+  id_dims = rb_intern("dims");
   id_length = rb_intern("length");
+  id_name = rb_intern("name");
+  id_shape = rb_intern("shape");
 
   VALUE mMenoh = rb_define_module("Menoh");
 
