@@ -13,12 +13,20 @@ typedef struct menoh_ruby {
   menoh_model_data_handle model_data;
 } menoh_ruby;
 
+static void wrap_menoh_free(menoh_ruby *);
+
+static const rb_data_type_t menoh_ruby_data_type = {
+  "Menoh::Menoh",
+  {NULL, (void(*)(void*))wrap_menoh_free, NULL,},
+  0, NULL, RUBY_TYPED_FREE_IMMEDIATELY
+};
+
 static ID id_backend, id_input_layers, id_output_layers;
 static ID id_data, id_dims, id_length, id_name, id_shape;
 
 static menoh_ruby *getONNX(VALUE self) {
   menoh_ruby *p;
-  Data_Get_Struct(self, menoh_ruby, p);
+  TypedData_Get_Struct(self, menoh_ruby, &menoh_ruby_data_type, p);
   return p;
 }
 
@@ -32,7 +40,7 @@ static void wrap_menoh_free(menoh_ruby *p) {
 static VALUE wrap_menoh_alloc(VALUE klass) {
   void *p = ruby_xmalloc(sizeof(menoh_ruby));
   memset(p, 0, sizeof(menoh_ruby));
-  return Data_Wrap_Struct(klass, NULL, wrap_menoh_free, p);
+  return TypedData_Wrap_Struct(klass, &menoh_ruby_data_type, p);
 }
 
 static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
@@ -62,9 +70,18 @@ typedef struct menohModel {
   int32_t input_layer_num;
 } menohModel;
 
+static void wrap_model_free(menohModel *);
+static void wrap_model_mark(menohModel *);
+
+static const rb_data_type_t menohModel_data_type = {
+  "Menoh::MenohModel",
+  {(void(*)(void*))wrap_model_mark, (void(*)(void*))wrap_model_free, NULL,},
+  0, NULL, RUBY_TYPED_FREE_IMMEDIATELY
+};
+
 static menohModel *getModel(VALUE self) {
   menohModel *p;
-  Data_Get_Struct(self, menohModel, p);
+  TypedData_Get_Struct(self, menohModel, &menohModel_data_type, p);
   return p;
 }
 
@@ -98,7 +115,7 @@ static void wrap_model_mark(menohModel *p) {
 static VALUE wrap_model_alloc(VALUE klass) {
   void *p = ruby_xmalloc(sizeof(menohModel));
   memset(p, 0, sizeof(menohModel));
-  return Data_Wrap_Struct(klass, wrap_model_mark, wrap_model_free, p);
+  return TypedData_Wrap_Struct(klass, &menohModel_data_type, p);
 }
 
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
