@@ -59,9 +59,7 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 typedef struct menohModel {
   float **input_buffs;
   float **output_buffs;
-  menoh_variable_profile_table_builder_handle vpt_builder;
   menoh_variable_profile_table_handle variable_profile_table;
-  menoh_model_builder_handle model_builder;
   menoh_model_handle model;
   VALUE vinput_layers;
   VALUE voutput_layers;
@@ -87,10 +85,7 @@ static void wrap_model_free(menohModel *p) {
   if (p) {
     if (p->variable_profile_table)
       menoh_delete_variable_profile_table(p->variable_profile_table);
-    if (p->vpt_builder)
-      menoh_delete_variable_profile_table_builder(p->vpt_builder);
     if (p->model) menoh_delete_model(p->model);
-    if (p->model_builder) menoh_delete_model_builder(p->model_builder);
     if (p->input_buffs) {
       for (int32_t i = 0; i < p->input_layer_num; i++) {
         ruby_xfree(p->input_buffs[i]);
@@ -115,24 +110,21 @@ static VALUE wrap_model_alloc(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &menohModel_data_type, p);
 }
 
-static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
-  // option
-  menoh_model_data_handle model_data = getONNX(vonnx)->model_data;
-  VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
+struct build_vpt_arg {
+  VALUE self;
+  VALUE vinput_layers;
+  VALUE voutput_layers;
+  menoh_model_data_handle model_data;
+  menoh_variable_profile_table_builder_handle vpt_builder;
+};
 
-  // option
-  VALUE vinput_layers =
-      rb_hash_aref(option, ID2SYM(id_input_layers));
-  VALUE voutput_layers =
-      rb_hash_aref(option, ID2SYM(id_output_layers));
-
-  getModel(self)->vinput_layers = vinput_layers;
-  getModel(self)->voutput_layers = voutput_layers;
-
-  // get vpt builder
-  ERROR_CHECK(
-      menoh_make_variable_profile_table_builder(&(getModel(self)->vpt_builder)),
-      rb_eStandardError);
+static VALUE build_vpt(VALUE arg) {
+  struct build_vpt_arg *arg2 = (struct build_vpt_arg*)arg;
+  VALUE self = arg2->self;
+  VALUE vinput_layers = arg2->vinput_layers;
+  VALUE voutput_layers = arg2->voutput_layers;
+  menoh_model_data_handle model_data = arg2->model_data;
+  menoh_variable_profile_table_builder_handle vpt_builder = arg2->vpt_builder;
 
   // set output_layer
   int32_t output_layer_num =
@@ -140,7 +132,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     ERROR_CHECK(menoh_variable_profile_table_builder_add_output_name(
-                    getModel(self)->vpt_builder, StringValueCStr(voutput_layer)),
+                    vpt_builder, StringValueCStr(voutput_layer)),
                 rb_eStandardError);
   }
 
@@ -161,31 +153,52 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
     }
     ERROR_CHECK(
         menoh_variable_profile_table_builder_add_input_profile(
-            getModel(self)->vpt_builder, StringValueCStr(vname),
+            vpt_builder, StringValueCStr(vname),
             menoh_dtype_float,
             dims_length,
             dims),
         rb_eStandardError);
   }
 
-  // build variable provile table
+  // build variable profile table
+  menoh_variable_profile_table_handle variable_profile_table;
   ERROR_CHECK(menoh_build_variable_profile_table(
-                  getModel(self)->vpt_builder, model_data,
-                  &(getModel(self)->variable_profile_table)),
+                  vpt_builder, model_data,
+                  &variable_profile_table),
               rb_eStandardError);
 
-  // optimize
-  ERROR_CHECK(
-      menoh_model_data_optimize(model_data,
-                                getModel(self)->variable_profile_table),
-      rb_eStandardError);
+  return (VALUE)variable_profile_table;
+}
 
-  // get model buildler
-  ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table,
-                                        &(getModel(self)->model_builder)),
-              rb_eStandardError);
+static VALUE vpt_builder_free(VALUE arg) {
+  menoh_delete_variable_profile_table_builder((menoh_variable_profile_table_builder_handle)arg);
+  return Qnil;
+}
+
+struct build_model_arg {
+  VALUE self;
+  VALUE vinput_layers;
+  VALUE vbackend;
+  menoh_model_data_handle model_data;
+  menoh_model_builder_handle model_builder;
+};
+
+static VALUE model_builder_free(VALUE arg) {
+  menoh_delete_model_builder((menoh_model_builder_handle)arg);
+  return Qnil;
+}
+
+static VALUE build_model(VALUE arg) {
+  struct build_model_arg *arg2 = (struct build_model_arg*)arg;
+  VALUE self = arg2->self;
+  VALUE vinput_layers = arg2->vinput_layers;
+  VALUE vbackend = arg2->vbackend;
+  menoh_model_data_handle model_data = arg2->model_data;
+  menoh_model_builder_handle model_builder = arg2->model_builder;
 
   // attach input buffer to model builder
+  int32_t input_layer_num =
+      NUM2INT(rb_funcall(vinput_layers, id_length, 0));
   getModel(self)->input_buffs =
       (float **)ruby_xmalloc(sizeof(float **) * input_layer_num);
   for (int32_t i = 0; i < input_layer_num; i++) {
@@ -206,15 +219,71 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
     getModel(self)->input_buffs[i] = input_buff;
     ERROR_CHECK(
         menoh_model_builder_attach_external_buffer(
-            getModel(self)->model_builder, StringValueCStr(vname), input_buff),
+            model_builder, StringValueCStr(vname), input_buff),
         rb_eStandardError);
   }
 
   // build model
+  menoh_model_handle model;
   ERROR_CHECK(menoh_build_model(
-                  getModel(self)->model_builder, model_data,
-                  StringValueCStr(vbackend), "", &(getModel(self)->model)),
+                  model_builder, model_data,
+                  StringValueCStr(vbackend), "", &model),
               rb_eStandardError);
+  return (VALUE)model;
+}
+
+static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
+  // option
+  menoh_model_data_handle model_data = getONNX(vonnx)->model_data;
+  VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
+
+  // option
+  VALUE vinput_layers =
+      rb_hash_aref(option, ID2SYM(id_input_layers));
+  VALUE voutput_layers =
+      rb_hash_aref(option, ID2SYM(id_output_layers));
+  getModel(self)->vinput_layers = vinput_layers;
+  getModel(self)->voutput_layers = voutput_layers;
+
+  // get vpt builder
+  menoh_variable_profile_table_builder_handle vpt_builder;
+  ERROR_CHECK(
+      menoh_make_variable_profile_table_builder(&vpt_builder),
+      rb_eStandardError);
+
+  // build variable profile table
+  struct build_vpt_arg build_vpt_arg = {
+    .self = self,
+    .vinput_layers = vinput_layers,
+    .voutput_layers = voutput_layers,
+    .model_data = model_data,
+    .vpt_builder = vpt_builder
+  };
+  getModel(self)->variable_profile_table = (menoh_variable_profile_table_handle)
+    rb_ensure(build_vpt, (VALUE)&build_vpt_arg, vpt_builder_free, (VALUE)vpt_builder);
+
+  // optimize
+  ERROR_CHECK(
+      menoh_model_data_optimize(model_data,
+                                getModel(self)->variable_profile_table),
+      rb_eStandardError);
+
+  // get model buildler
+  menoh_model_builder_handle model_builder;
+  ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table,
+                                        &model_builder),
+              rb_eStandardError);
+
+  // build model
+  struct build_model_arg build_model_arg = {
+    .self = self,
+    .vinput_layers = vinput_layers,
+    .vbackend = vbackend,
+    .model_data = model_data,
+    .model_builder = model_builder
+  };
+  getModel(self)->model = (menoh_model_handle)
+    rb_ensure(build_model, (VALUE)&build_model_arg, model_builder_free, (VALUE)model_builder);
 
   return Qnil;
 }
