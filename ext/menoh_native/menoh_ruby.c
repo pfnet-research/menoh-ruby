@@ -57,7 +57,6 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 }
 
 typedef struct menohModel {
-  VALUE vbackend;
   float **input_buffs;
   float **output_buffs;
   menoh_variable_profile_table_builder_handle vpt_builder;
@@ -105,7 +104,6 @@ static void wrap_model_free(menohModel *p) {
 
 static void wrap_model_mark(menohModel *p) {
   if (p) {
-    if (p->vbackend) rb_gc_mark(p->vbackend);
     if (p->vinput_layers) rb_gc_mark(p->vinput_layers);
     if (p->voutput_layers) rb_gc_mark(p->voutput_layers);
   }
@@ -121,7 +119,6 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // option
   menoh_model_data_handle model_data = getONNX(vonnx)->model_data;
   VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
-  getModel(self)->vbackend = vbackend;
 
   // option
   VALUE vinput_layers =
