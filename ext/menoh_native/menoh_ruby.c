@@ -57,7 +57,6 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 }
 
 typedef struct menohModel {
-  menoh_model_data_handle model_data;
   VALUE vbackend;
   float **input_buffs;
   float **output_buffs;
@@ -120,7 +119,7 @@ static VALUE wrap_model_alloc(VALUE klass) {
 
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // option
-  getModel(self)->model_data = getONNX(vonnx)->model_data;
+  menoh_model_data_handle model_data = getONNX(vonnx)->model_data;
   VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
   getModel(self)->vbackend = vbackend;
 
@@ -174,13 +173,13 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
 
   // build variable provile table
   ERROR_CHECK(menoh_build_variable_profile_table(
-                  getModel(self)->vpt_builder, getModel(self)->model_data,
+                  getModel(self)->vpt_builder, model_data,
                   &(getModel(self)->variable_profile_table)),
               rb_eStandardError);
 
   // optimize
   ERROR_CHECK(
-      menoh_model_data_optimize(getModel(self)->model_data,
+      menoh_model_data_optimize(model_data,
                                 getModel(self)->variable_profile_table),
       rb_eStandardError);
 
@@ -216,7 +215,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
 
   // build model
   ERROR_CHECK(menoh_build_model(
-                  getModel(self)->model_builder, getModel(self)->model_data,
+                  getModel(self)->model_builder, model_data,
                   StringValueCStr(vbackend), "", &(getModel(self)->model)),
               rb_eStandardError);
 
