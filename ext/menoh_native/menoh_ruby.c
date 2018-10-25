@@ -1,4 +1,5 @@
 #include "menoh_ruby.h"
+#include <ruby/thread.h>
 
 #define ERROR_CHECK(statement, exceptiontype)                        \
   {                                                                  \
@@ -223,6 +224,18 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   return Qnil;
 }
 
+
+struct model_run_arg {
+  menoh_model_handle model;
+  menoh_error_code err;
+};
+
+static void *model_run(void *arg) {
+  struct model_run_arg* arg2 = (struct model_run_arg*)arg;
+  arg2->err = menoh_model_run(arg2->model);
+  return NULL;
+}
+
 static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   VALUE vinput_layers = getModel(self)->vinput_layers;
   VALUE voutput_layers = getModel(self)->voutput_layers;
@@ -263,7 +276,12 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   }
 
   // run model
-  ERROR_CHECK(menoh_model_run(getModel(self)->model), rb_eStandardError);
+  struct model_run_arg model_run_arg = {
+    .model = getModel(self)->model,
+    .err = menoh_error_code_success,
+  };
+  rb_thread_call_without_gvl(model_run, &model_run_arg, RUBY_UBF_IO, NULL);
+  ERROR_CHECK(model_run_arg.err, rb_eStandardError);
 
   // Get output
   VALUE results = rb_ary_new();
