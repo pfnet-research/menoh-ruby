@@ -31,9 +31,7 @@ static menoh_ruby *getONNX(VALUE self) {
 }
 
 static void wrap_menoh_free(menoh_ruby *p) {
-  if (p) {
-    if (p->model_data) menoh_delete_model_data(p->model_data);
-  }
+  menoh_delete_model_data(p->model_data);
   ruby_xfree(p);
 }
 
@@ -82,26 +80,21 @@ static menohModel *getModel(VALUE self) {
 }
 
 static void wrap_model_free(menohModel *p) {
-  if (p) {
-    if (p->variable_profile_table)
-      menoh_delete_variable_profile_table(p->variable_profile_table);
-    if (p->model) menoh_delete_model(p->model);
-    if (p->input_buffs) {
-      for (int32_t i = 0; i < p->input_layer_num; i++) {
-        ruby_xfree(p->input_buffs[i]);
-      }
+  menoh_delete_variable_profile_table(p->variable_profile_table);
+  menoh_delete_model(p->model);
+  if (p->input_buffs) {
+    for (int32_t i = 0; i < p->input_layer_num; i++) {
+      ruby_xfree(p->input_buffs[i]);
     }
-    ruby_xfree(p->input_buffs);
-    ruby_xfree(p->output_buffs);
-    ruby_xfree(p);
   }
+  ruby_xfree(p->input_buffs);
+  ruby_xfree(p->output_buffs);
+  ruby_xfree(p);
 }
 
 static void wrap_model_mark(menohModel *p) {
-  if (p) {
-    if (p->vinput_layers) rb_gc_mark(p->vinput_layers);
-    if (p->voutput_layers) rb_gc_mark(p->voutput_layers);
-  }
+  rb_gc_mark(p->vinput_layers);
+  rb_gc_mark(p->voutput_layers);
 }
 
 static VALUE wrap_model_alloc(VALUE klass) {
