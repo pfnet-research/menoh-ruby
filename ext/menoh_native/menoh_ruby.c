@@ -282,10 +282,10 @@ static VALUE build_model(VALUE arg) {
   menoh_model_builder_handle model_builder = arg2->model_builder;
 
   // build model
-  menoh_model_handle model;
   ERROR_CHECK(menoh_build_model(
                   model_builder, model_data,
-                  StringValueCStr(vbackend), "", &model));
+                  StringValueCStr(vbackend), "", &getModel(self)->model));
+  menoh_model_handle model = getModel(self)->model;
 
   // attach input buffer to model builder
   int32_t input_layer_num =
@@ -327,7 +327,7 @@ static VALUE build_model(VALUE arg) {
     getModel(self)->output_buffs[i] = output_buff;
   }
 
-  return (VALUE)model;
+  return Qnil;
 }
 
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
@@ -378,8 +378,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
     .model_data = model_data,
     .model_builder = model_builder
   };
-  getModel(self)->model = (menoh_model_handle)
-    rb_ensure(build_model, (VALUE)&build_model_arg, model_builder_free, (VALUE)model_builder);
+  rb_ensure(build_model, (VALUE)&build_model_arg, model_builder_free, (VALUE)model_builder);
 
   return Qnil;
 }
