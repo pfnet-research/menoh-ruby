@@ -1,13 +1,112 @@
 #include "menoh_ruby.h"
 
-#define ERROR_CHECK(statement, exceptiontype)                        \
-  {                                                                  \
-    menoh_error_code ec = statement;                                 \
-    if (ec) {                                                        \
-      rb_raise(exceptiontype, "%s", menoh_get_last_error_message()); \
-      return Qnil;                                                   \
-    }                                                                \
+static VALUE eError;
+static VALUE eStdError;
+static VALUE eUnknownError;
+static VALUE eInvalidFilename;
+static VALUE eUnsupportedONNXOpsetVersion;
+static VALUE eONNXParseError;
+static VALUE eInvalidDType;
+static VALUE eInvalidAttributeType;
+static VALUE eUnsupportedOperatorAttribute;
+static VALUE eDimensionMismatch;
+static VALUE eVariableNotFound;
+static VALUE eIndexOutOfRange;
+static VALUE eJSONParseError;
+static VALUE eInvalidBackendName;
+static VALUE eUnsupportedOperator;
+static VALUE eFailedToConfigureOperator;
+static VALUE eBackendError;
+static VALUE eSameNamedVariableAlreadyExist;
+static VALUE eUnsupportedInputDims;
+static VALUE eSameNamedParameterAlreadyExist;
+static VALUE eSameNamedAttributeAlreadyExist;
+static VALUE eInvalidBackendConfigError;
+static VALUE eInputNotFoundError;
+static VALUE eOutputNotFoundError;
+
+static void error_check(menoh_error_code ec) {
+  VALUE e = eError; // eUnknownError might be better?
+
+  switch (ec) {
+  case menoh_error_code_success:
+    return;
+  case menoh_error_code_std_error:
+    e = eStdError;
+    break;
+  case menoh_error_code_unknown_error:
+    e = eUnknownError;
+    break;
+  case menoh_error_code_invalid_filename:
+    e = eInvalidFilename;
+    break;
+  case menoh_error_code_unsupported_onnx_opset_version:
+    e = eUnsupportedONNXOpsetVersion;
+    break;
+  case menoh_error_code_onnx_parse_error:
+    e = eONNXParseError;
+    break;
+  case menoh_error_code_invalid_dtype:
+    e = eInvalidDType;
+    break;
+  case menoh_error_code_invalid_attribute_type:
+    e = eInvalidAttributeType;
+    break;
+  case menoh_error_code_unsupported_operator_attribute:
+    e = eUnsupportedOperatorAttribute;
+    break;
+  case menoh_error_code_dimension_mismatch:
+    e = eDimensionMismatch;
+    break;
+  case menoh_error_code_variable_not_found:
+    e = eVariableNotFound;
+    break;
+  case menoh_error_code_index_out_of_range:
+    e = eIndexOutOfRange;
+    break;
+  case menoh_error_code_json_parse_error:
+    e = eJSONParseError;
+    break;
+  case menoh_error_code_invalid_backend_name:
+    e = eInvalidBackendName;
+    break;
+  case menoh_error_code_unsupported_operator:
+    e = eUnsupportedOperator;
+    break;
+  case menoh_error_code_failed_to_configure_operator:
+    e = eFailedToConfigureOperator;
+    break;
+  case menoh_error_code_backend_error:
+    e = eBackendError;
+    break;
+  case menoh_error_code_same_named_variable_already_exist:
+    e = eSameNamedVariableAlreadyExist;
+    break;
+  case menoh_error_code_unsupported_input_dims:
+    e = eUnsupportedInputDims;
+    break;
+  case menoh_error_code_same_named_parameter_already_exist:
+    e = eSameNamedParameterAlreadyExist;
+    break;
+  case menoh_error_code_same_named_attribute_already_exist:
+    e = eSameNamedAttributeAlreadyExist;
+    break;
+  case menoh_error_code_invalid_backend_config_error:
+    e = eInvalidBackendConfigError;
+    break;
+  case menoh_error_code_input_not_found_error:
+    e = eInputNotFoundError;
+    break;
+  case menoh_error_code_output_not_found_error:
+    e = eOutputNotFoundError;
+    break;
   }
+
+  rb_raise(e, "%s", menoh_get_last_error_message());
+}
+
+#define ERROR_CHECK(statement) error_check(statement)
+
 
 typedef struct menoh_ruby {
   menoh_model_data_handle model_data;
@@ -31,9 +130,7 @@ static menoh_ruby *getONNX(VALUE self) {
 }
 
 static void wrap_menoh_free(menoh_ruby *p) {
-  if (p) {
-    if (p->model_data) menoh_delete_model_data(p->model_data);
-  }
+  menoh_delete_model_data(p->model_data);
   ruby_xfree(p);
 }
 
@@ -49,8 +146,7 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 
   // Load ONNX model
   menoh_model_data_handle model_data;
-  ERROR_CHECK(menoh_make_model_data_from_onnx(filename, &model_data),
-              rb_eArgError);
+  ERROR_CHECK(menoh_make_model_data_from_onnx(filename, &model_data));
   getONNX(self)->model_data = model_data;
 
   return Qnil;
@@ -82,21 +178,16 @@ static menohModel *getModel(VALUE self) {
 }
 
 static void wrap_model_free(menohModel *p) {
-  if (p) {
-    if (p->variable_profile_table)
-      menoh_delete_variable_profile_table(p->variable_profile_table);
-    if (p->model) menoh_delete_model(p->model);
-    ruby_xfree(p->input_buffs);
-    ruby_xfree(p->output_buffs);
-    ruby_xfree(p);
-  }
+  menoh_delete_variable_profile_table(p->variable_profile_table);
+  menoh_delete_model(p->model);
+  ruby_xfree(p->input_buffs);
+  ruby_xfree(p->output_buffs);
+  ruby_xfree(p);
 }
 
 static void wrap_model_mark(menohModel *p) {
-  if (p) {
-    if (p->vinput_layers) rb_gc_mark(p->vinput_layers);
-    if (p->voutput_layers) rb_gc_mark(p->voutput_layers);
-  }
+  rb_gc_mark(p->vinput_layers);
+  rb_gc_mark(p->voutput_layers);
 }
 
 static VALUE wrap_model_alloc(VALUE klass) {
@@ -127,8 +218,7 @@ static VALUE build_vpt(VALUE arg) {
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
     ERROR_CHECK(menoh_variable_profile_table_builder_add_output_name(
-                    vpt_builder, StringValueCStr(voutput_layer)),
-                rb_eStandardError);
+                    vpt_builder, StringValueCStr(voutput_layer)));
   }
 
   // set input layer
@@ -151,16 +241,14 @@ static VALUE build_vpt(VALUE arg) {
             vpt_builder, StringValueCStr(vname),
             menoh_dtype_float,
             dims_length,
-            dims),
-        rb_eStandardError);
+            dims));
   }
 
   // build variable profile table
   menoh_variable_profile_table_handle variable_profile_table;
   ERROR_CHECK(menoh_build_variable_profile_table(
                   vpt_builder, model_data,
-                  &variable_profile_table),
-              rb_eStandardError);
+                  &variable_profile_table));
 
   return (VALUE)variable_profile_table;
 }
@@ -197,8 +285,7 @@ static VALUE build_model(VALUE arg) {
   menoh_model_handle model;
   ERROR_CHECK(menoh_build_model(
                   model_builder, model_data,
-                  StringValueCStr(vbackend), "", &model),
-              rb_eStandardError);
+                  StringValueCStr(vbackend), "", &model));
 
   // attach input buffer to model builder
   int32_t input_layer_num =
@@ -222,8 +309,7 @@ static VALUE build_model(VALUE arg) {
     float *input_buff;
     ERROR_CHECK(menoh_model_get_variable_buffer_handle(
                     model, StringValueCStr(vname),
-                    (void **)&input_buff),
-                rb_eStandardError);
+                    (void **)&input_buff));
     getModel(self)->input_buffs[i] = input_buff;
   }
 
@@ -237,8 +323,7 @@ static VALUE build_model(VALUE arg) {
     float *output_buff;
     ERROR_CHECK(menoh_model_get_variable_buffer_handle(
                     model, StringValueCStr(voutput_layer),
-                    (void **)&output_buff),
-                rb_eStandardError);
+                    (void **)&output_buff));
     getModel(self)->output_buffs[i] = output_buff;
   }
 
@@ -261,8 +346,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // get vpt builder
   menoh_variable_profile_table_builder_handle vpt_builder;
   ERROR_CHECK(
-      menoh_make_variable_profile_table_builder(&vpt_builder),
-      rb_eStandardError);
+      menoh_make_variable_profile_table_builder(&vpt_builder));
 
   // build variable profile table
   struct build_vpt_arg build_vpt_arg = {
@@ -278,14 +362,12 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // optimize
   ERROR_CHECK(
       menoh_model_data_optimize(model_data,
-                                getModel(self)->variable_profile_table),
-      rb_eStandardError);
+                                getModel(self)->variable_profile_table));
 
   // get model buildler
   menoh_model_builder_handle model_builder;
   ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table,
-                                        &model_builder),
-              rb_eStandardError);
+                                        &model_builder));
 
   // build model
   struct build_model_arg build_model_arg = {
@@ -329,7 +411,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   }
 
   // run model
-  ERROR_CHECK(menoh_model_run(getModel(self)->model), rb_eStandardError);
+  ERROR_CHECK(menoh_model_run(getModel(self)->model));
 
   // Get output
   VALUE results = rb_ary_new();
@@ -343,16 +425,14 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     int32_t output_buffer_length = 1;
     ERROR_CHECK(menoh_variable_profile_table_get_dims_size(
                     getModel(self)->variable_profile_table,
-                    StringValueCStr(voutput_layer), &(dim_size)),
-                rb_eStandardError);
+                    StringValueCStr(voutput_layer), &(dim_size)));
     VALUE vresult_shape = rb_ary_new();
     // get each size of dimention
     for (int32_t dim = 0; dim < dim_size; dim++) {
       int32_t size;
       ERROR_CHECK(menoh_variable_profile_table_get_dims_at(
                       getModel(self)->variable_profile_table,
-                      StringValueCStr(voutput_layer), dim, &(size)),
-                  rb_eStandardError);
+                      StringValueCStr(voutput_layer), dim, &(size)));
       rb_ary_push(vresult_shape, INT2NUM(size));
       output_buffer_length *= size;
     }
@@ -402,4 +482,29 @@ void Init_menoh_native() {
 
   rb_define_private_method(model, "native_run",
                            RUBY_METHOD_FUNC(wrap_model_run), 1);
+
+  eError                          = rb_define_class_under(mMenoh, "Error", rb_eStandardError);
+  eStdError                       = rb_define_class_under(mMenoh, "StdError", eError);
+  eUnknownError                   = rb_define_class_under(mMenoh, "UnknownError", eError);
+  eInvalidFilename                = rb_define_class_under(mMenoh, "InvalidFilename", eError);
+  eUnsupportedONNXOpsetVersion    = rb_define_class_under(mMenoh, "UnsupportedONNXOpsetVersion", eError);
+  eONNXParseError                 = rb_define_class_under(mMenoh, "ONNXParseError", eError);
+  eInvalidDType                   = rb_define_class_under(mMenoh, "InvalidDType", eError);
+  eInvalidAttributeType           = rb_define_class_under(mMenoh, "InvalidAttributeType", eError);
+  eUnsupportedOperatorAttribute   = rb_define_class_under(mMenoh, "UnsupportedOperatorAttribute", eError);
+  eDimensionMismatch              = rb_define_class_under(mMenoh, "DimensionMismatch", eError);
+  eVariableNotFound               = rb_define_class_under(mMenoh, "VariableNotFound", eError);
+  eIndexOutOfRange                = rb_define_class_under(mMenoh, "IndexOutOfRange", eError);
+  eJSONParseError                 = rb_define_class_under(mMenoh, "JSONParseError", eError);
+  eInvalidBackendName             = rb_define_class_under(mMenoh, "InvalidBackendName", eError);
+  eUnsupportedOperator            = rb_define_class_under(mMenoh, "UnsupportedOperator", eError);
+  eFailedToConfigureOperator      = rb_define_class_under(mMenoh, "FailedToConfigureOperator", eError);
+  eBackendError                   = rb_define_class_under(mMenoh, "BackendError", eError);
+  eSameNamedVariableAlreadyExist  = rb_define_class_under(mMenoh, "SameNamedVariableAlreadyExist", eError);
+  eUnsupportedInputDims           = rb_define_class_under(mMenoh, "UnsupportedInputDims", eError);
+  eSameNamedParameterAlreadyExist = rb_define_class_under(mMenoh, "SameNamedParameterAlreadyExist", eError);
+  eSameNamedAttributeAlreadyExist = rb_define_class_under(mMenoh, "SameNamedAttributeAlreadyExist", eError);
+  eInvalidBackendConfigError      = rb_define_class_under(mMenoh, "InvalidBackendConfigError", eError);
+  eInputNotFoundError             = rb_define_class_under(mMenoh, "InputNotFoundError", eError);
+  eOutputNotFoundError            = rb_define_class_under(mMenoh, "OutputNotFoundError", eError);
 }
