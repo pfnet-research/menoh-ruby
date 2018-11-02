@@ -1,0 +1,35 @@
+sudo: required
+dist: trusty
+
+language: ruby
+
+os:
+  - linux
+  - osx
+
+rvm:
+  - 2.5.1
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - sourceline: 'ppa:maarten-fonville/protobuf'
+
+install:
+  - |
+    if [ $TRAVIS_OS_NAME == 'linux' ]; then
+        sudo apt update
+        curl -LO https://github.com/pfnet-research/menoh/releases/download/v1.1.0/ubuntu1404_mkl-dnn_0.16-1_amd64.deb
+        curl -LO https://github.com/pfnet-research/menoh/releases/download/v1.1.0/ubuntu1404_menoh_1.1.0-1_amd64.deb
+        curl -LO https://github.com/pfnet-research/menoh/releases/download/v1.1.0/ubuntu1404_menoh-dev_1.1.0-1_amd64.deb
+        sudo dpkg -i --force-depends *.deb
+        sudo apt install -f
+    fi
+  - |
+    if [ $TRAVIS_OS_NAME == 'osx' ]; then
+        brew tap pfnet-research/menoh
+        brew cask uninstall oclint # oclint conflicts with gcc
+        brew install menoh
+    fi
+  - bundle install --jobs=3 --retry=3
