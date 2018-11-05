@@ -180,11 +180,6 @@ static menohModel *getModel(VALUE self) {
 static void wrap_model_free(menohModel *p) {
   menoh_delete_variable_profile_table(p->variable_profile_table);
   menoh_delete_model(p->model);
-  if (p->input_buffs) {
-    for (int32_t i = 0; i < p->input_layer_num; i++) {
-      ruby_xfree(p->input_buffs[i]);
-    }
-  }
   ruby_xfree(p->input_buffs);
   ruby_xfree(p->output_buffs);
   ruby_xfree(p);
@@ -266,6 +261,7 @@ static VALUE vpt_builder_free(VALUE arg) {
 struct build_model_arg {
   VALUE self;
   VALUE vinput_layers;
+  VALUE voutput_layers;
   VALUE vbackend;
   menoh_model_data_handle model_data;
   menoh_model_builder_handle model_builder;
@@ -280,15 +276,22 @@ static VALUE build_model(VALUE arg) {
   struct build_model_arg *arg2 = (struct build_model_arg*)arg;
   VALUE self = arg2->self;
   VALUE vinput_layers = arg2->vinput_layers;
+  VALUE voutput_layers = arg2->voutput_layers;
   VALUE vbackend = arg2->vbackend;
   menoh_model_data_handle model_data = arg2->model_data;
   menoh_model_builder_handle model_builder = arg2->model_builder;
+
+  // build model
+  ERROR_CHECK(menoh_build_model(
+                  model_builder, model_data,
+                  StringValueCStr(vbackend), "", &getModel(self)->model));
+  menoh_model_handle model = getModel(self)->model;
 
   // attach input buffer to model builder
   int32_t input_layer_num =
       NUM2INT(rb_funcall(vinput_layers, id_length, 0));
   getModel(self)->input_buffs =
-      (float **)ruby_xmalloc(sizeof(float **) * input_layer_num);
+      (float **)ruby_xmalloc(sizeof(float *) * input_layer_num);
   for (int32_t i = 0; i < input_layer_num; i++) {
     VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
     VALUE vname =
@@ -303,19 +306,28 @@ static VALUE build_model(VALUE arg) {
     for (int32_t j = 0; j < dims_length; j++)
       buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
 
-    float *input_buff = (float *)ruby_xmalloc(sizeof(float) * buffer_length);
+    float *input_buff;
+    ERROR_CHECK(menoh_model_get_variable_buffer_handle(
+                    model, StringValueCStr(vname),
+                    (void **)&input_buff));
     getModel(self)->input_buffs[i] = input_buff;
-    ERROR_CHECK(
-        menoh_model_builder_attach_external_buffer(
-            model_builder, StringValueCStr(vname), input_buff));
   }
 
-  // build model
-  menoh_model_handle model;
-  ERROR_CHECK(menoh_build_model(
-                  model_builder, model_data,
-                  StringValueCStr(vbackend), "", &model));
-  return (VALUE)model;
+  // attach output buffer to model
+  int32_t output_layer_num =
+      NUM2INT(rb_funcall(voutput_layers, id_length, 0));
+  getModel(self)->output_buffs =
+      (float **)ruby_xmalloc(sizeof(float *) * output_layer_num);
+  for (int32_t i = 0; i < output_layer_num; i++) {
+    VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
+    float *output_buff;
+    ERROR_CHECK(menoh_model_get_variable_buffer_handle(
+                    model, StringValueCStr(voutput_layer),
+                    (void **)&output_buff));
+    getModel(self)->output_buffs[i] = output_buff;
+  }
+
+  return Qnil;
 }
 
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
@@ -361,12 +373,12 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   struct build_model_arg build_model_arg = {
     .self = self,
     .vinput_layers = vinput_layers,
+    .voutput_layers = voutput_layers,
     .vbackend = vbackend,
     .model_data = model_data,
     .model_builder = model_builder
   };
-  getModel(self)->model = (menoh_model_handle)
-    rb_ensure(build_model, (VALUE)&build_model_arg, model_builder_free, (VALUE)model_builder);
+  rb_ensure(build_model, (VALUE)&build_model_arg, model_builder_free, (VALUE)model_builder);
 
   return Qnil;
 }
@@ -395,18 +407,6 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
       getModel(self)->input_buffs[i][j] =
           (float)(NUM2DBL(rb_ary_entry(data, j)));
     }
-  }
-
-  // attach output buffer to model
-  getModel(self)->output_buffs =
-      (float **)ruby_xmalloc(sizeof(float *) * output_layer_num);
-  for (int32_t i = 0; i < output_layer_num; i++) {
-    VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
-    float *output_buff;
-    ERROR_CHECK(menoh_model_get_variable_buffer_handle(
-                    getModel(self)->model, StringValueCStr(voutput_layer),
-                    (void **)&output_buff));
-    getModel(self)->output_buffs[i] = output_buff;
   }
 
   // run model
