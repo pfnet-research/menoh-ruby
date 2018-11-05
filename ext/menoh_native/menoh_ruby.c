@@ -154,8 +154,8 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 }
 
 typedef struct menohModel {
-  float **input_buffs;
-  float **output_buffs;
+  void **input_buffs;
+  void **output_buffs;
   menoh_variable_profile_table_handle variable_profile_table;
   menoh_model_handle model;
   VALUE vinput_layers;
@@ -292,7 +292,7 @@ static VALUE build_model(VALUE arg) {
   int32_t input_layer_num =
       NUM2INT(rb_funcall(vinput_layers, id_length, 0));
   getModel(self)->input_buffs =
-      (float **)ruby_xmalloc(sizeof(float *) * input_layer_num);
+      (void **)ruby_xmalloc(sizeof(void *) * input_layer_num);
   for (int32_t i = 0; i < input_layer_num; i++) {
     VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
     VALUE vname =
@@ -307,10 +307,10 @@ static VALUE build_model(VALUE arg) {
     for (int32_t j = 0; j < dims_length; j++)
       buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
 
-    float *input_buff;
+    void *input_buff;
     ERROR_CHECK(menoh_model_get_variable_buffer_handle(
                     model, StringValueCStr(vname),
-                    (void **)&input_buff));
+                    &input_buff));
     getModel(self)->input_buffs[i] = input_buff;
   }
 
@@ -318,13 +318,13 @@ static VALUE build_model(VALUE arg) {
   int32_t output_layer_num =
       NUM2INT(rb_funcall(voutput_layers, id_length, 0));
   getModel(self)->output_buffs =
-      (float **)ruby_xmalloc(sizeof(float *) * output_layer_num);
+      (void **)ruby_xmalloc(sizeof(void *) * output_layer_num);
   for (int32_t i = 0; i < output_layer_num; i++) {
     VALUE voutput_layer = rb_ary_entry(voutput_layers, i);
-    float *output_buff;
+    void *output_buff;
     ERROR_CHECK(menoh_model_get_variable_buffer_handle(
                     model, StringValueCStr(voutput_layer),
-                    (void **)&output_buff));
+                    &output_buff));
     getModel(self)->output_buffs[i] = output_buff;
   }
 
@@ -417,7 +417,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
 
     VALUE data = rb_ary_entry(dataset, i);
     for (int32_t j = 0; j < buffer_length; j++) {
-      getModel(self)->input_buffs[i][j] =
+      ((float*)getModel(self)->input_buffs[i])[j] =
           (float)(NUM2DBL(rb_ary_entry(data, j)));
     }
   }
@@ -458,8 +458,8 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     VALUE vresult_buffer = rb_ary_new();
     for (int32_t j = 0; j < output_buffer_length; j++) {
       float *output_buff;
-      output_buff = getModel(self)->output_buffs[output_layer_i];
-      rb_ary_push(vresult_buffer, DBL2NUM(*(output_buff + j)));
+      output_buff = (float*)getModel(self)->output_buffs[output_layer_i];
+      rb_ary_push(vresult_buffer, DBL2NUM(output_buff[j]));
     }
 
     rb_hash_aset(result_each, ID2SYM(id_name), voutput_layer);
