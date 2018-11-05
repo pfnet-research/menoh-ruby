@@ -121,7 +121,7 @@ static const rb_data_type_t menoh_ruby_data_type = {
   0, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
-static ID id_backend, id_input_layers, id_output_layers;
+static ID id_backend, id_backend_config, id_input_layers, id_output_layers;
 static ID id_data, id_dims, id_length, id_name, id_shape;
 
 static menoh_ruby *getONNX(VALUE self) {
@@ -261,9 +261,7 @@ static VALUE vpt_builder_free(VALUE arg) {
 
 struct build_model_arg {
   VALUE self;
-  VALUE vinput_layers;
-  VALUE voutput_layers;
-  VALUE vbackend;
+  VALUE option;
   menoh_model_data_handle model_data;
   menoh_model_builder_handle model_builder;
 };
@@ -276,16 +274,20 @@ static VALUE model_builder_free(VALUE arg) {
 static VALUE build_model(VALUE arg) {
   struct build_model_arg *arg2 = (struct build_model_arg*)arg;
   VALUE self = arg2->self;
-  VALUE vinput_layers = arg2->vinput_layers;
-  VALUE voutput_layers = arg2->voutput_layers;
-  VALUE vbackend = arg2->vbackend;
+  VALUE vinput_layers = getModel(self)->vinput_layers;
+  VALUE voutput_layers = getModel(self)->voutput_layers;
+  VALUE option = arg2->option;
   menoh_model_data_handle model_data = arg2->model_data;
   menoh_model_builder_handle model_builder = arg2->model_builder;
 
   // build model
+  VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
+  VALUE vbackend_config = rb_hash_aref(option, ID2SYM(id_backend_config));
   ERROR_CHECK(menoh_build_model(
                   model_builder, model_data,
-                  StringValueCStr(vbackend), "", &getModel(self)->model));
+                  StringValueCStr(vbackend),
+                  NIL_P(vbackend_config) ? "" : StringValueCStr(vbackend_config),
+                  &getModel(self)->model));
   menoh_model_handle model = getModel(self)->model;
 
   // attach input buffer to model builder
@@ -334,7 +336,6 @@ static VALUE build_model(VALUE arg) {
 static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // option
   menoh_model_data_handle model_data = getONNX(vonnx)->model_data;
-  VALUE vbackend = rb_hash_aref(option, ID2SYM(id_backend));
 
   // option
   VALUE vinput_layers =
@@ -373,9 +374,7 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
   // build model
   struct build_model_arg build_model_arg = {
     .self = self,
-    .vinput_layers = vinput_layers,
-    .voutput_layers = voutput_layers,
-    .vbackend = vbackend,
+    .option = option,
     .model_data = model_data,
     .model_builder = model_builder
   };
@@ -475,6 +474,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
 
 void Init_menoh_native() {
   id_backend = rb_intern("backend");
+  id_backend_config = rb_intern("backend_config");
   id_input_layers = rb_intern("input_layers");
   id_output_layers = rb_intern("output_layers");
   id_data = rb_intern("data");

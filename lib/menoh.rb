@@ -1,5 +1,6 @@
 require 'menoh/version'
 require 'menoh/menoh_native'
+require 'json'
 
 module Menoh
   class Menoh
@@ -32,6 +33,15 @@ module Menoh
       if option[:output_layers].nil? || option[:output_layers].empty?
         raise "Invalid ':output_layers'"
       end
+
+      option = option.dup
+      if option.has_key?(:backend_config)
+        config = option[:backend_config]
+        unless config.nil? || config.is_a?(String)
+          option[:backend_config] = JSON.dump(config)
+        end
+      end
+
       native_init menoh, option
       @option = option
       yield self if block_given?
