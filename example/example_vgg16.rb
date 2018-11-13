@@ -12,7 +12,7 @@ def download_file(url, output)
     end
   end
 end
-download_file('https://www.dropbox.com/s/bjfn9kehukpbmcm/VGG16.onnx?dl=1', './data/VGG16.onnx')
+download_file('https://preferredjp.box.com/shared/static/o2xip23e3f0knwc5ve78oderuglkf2wt.onnx', './data/VGG16.onnx')
 download_file('https://raw.githubusercontent.com/HoldenCaulfieldRye/caffe/master/data/ilsvrc12/synset_words.txt', './data/synset_words.txt')
 download_file('https://upload.wikimedia.org/wikipedia/commons/5/54/Light_sussex_hen.jpg', './data/Light_sussex_hen.jpg')
 download_file('https://upload.wikimedia.org/wikipedia/commons/f/fd/FoS20162016_0625_151036AA_%2827826100631%29.jpg', './data/honda_nsx.jpg')
@@ -32,9 +32,9 @@ input_shape = {
 onnx_obj = Menoh::Menoh.new './data/VGG16.onnx'
 
 # onnx variable name
-CONV1_1_IN_NAME = '140326425860192'.freeze
-FC6_OUT_NAME = '140326200777584'.freeze
-SOFTMAX_OUT_NAME = '140326200803680'.freeze
+CONV1_1_IN_NAME = 'Input_0'.freeze
+FC6_OUT_NAME = 'Gemm_0'.freeze
+SOFTMAX_OUT_NAME = 'Softmax_0'.freeze
 
 # model options for model
 model_opt = {
