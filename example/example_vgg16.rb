@@ -28,7 +28,7 @@ input_shape = {
   width: 224,
   height: 224
 }
-rbg_offset = {
+rgb_offset = {
   R: 123.68,
   G: 116.779,
   B: 103.939
@@ -70,7 +70,7 @@ image_set = [
       image = image.resize_to_fill(input_shape[:width], input_shape[:height])
       'RGB'.split('').map do |color|
         image.export_pixels(0, 0, image.columns, image.rows, color).map do |pix|
-          pix / 256 - rbg_offset[color.to_sym]
+          pix / 256 - rgb_offset[color.to_sym]
         end
       end.flatten
     end.flatten
