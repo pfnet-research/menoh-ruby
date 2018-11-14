@@ -5,6 +5,7 @@ require 'menoh'
 # download dependencies
 def download_file(url, output)
   return if File.exist? output
+
   puts "downloading... #{url}"
   File.open(output, 'wb') do |f_output|
     open(url, 'rb') do |f_input|
@@ -27,6 +28,11 @@ input_shape = {
   width: 224,
   height: 224
 }
+rbg_offset = {
+  R: 123.68,
+  G: 116.779,
+  B: 103.939
+}
 
 # load ONNX file
 onnx_obj = Menoh::Menoh.new './data/VGG16.onnx'
@@ -46,7 +52,7 @@ model_opt = {
         image_list.length,
         input_shape[:channel_num],
         input_shape[:height],
-        input_shape[:width],
+        input_shape[:width]
       ]
     }
   ],
@@ -63,7 +69,9 @@ image_set = [
       image = Magick::Image.read(image_filepath).first
       image = image.resize_to_fill(input_shape[:width], input_shape[:height])
       'RGB'.split('').map do |color|
-        image.export_pixels(0, 0, image.columns, image.rows, color).map { |pix| pix / 256 }
+        image.export_pixels(0, 0, image.columns, image.rows, color).map do |pix|
+          pix / 256 - rbg_offset[color.to_sym]
+        end
       end.flatten
     end.flatten
   }
