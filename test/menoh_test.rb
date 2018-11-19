@@ -162,6 +162,17 @@ class MenohTest < Minitest::Test
           }
         ],
         output_layers: ['invalid']
+      },
+      {
+        backend: 'mkldnn',
+        input_layers: [
+          {
+            name: MNIST_IN_NAME,
+            dims: [10, 1, 28, 28],
+            dtype: 'invalid'
+          }
+        ],
+        output_layers: [MNIST_OUT_NAME]
       }
     ]
     invalid_opts.each do |opt|
