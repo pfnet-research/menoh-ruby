@@ -156,7 +156,6 @@ static VALUE wrap_menoh_init(VALUE self, VALUE vfilename) {
 typedef struct menohModel {
   void **input_buffs;
   void **output_buffs;
-  menoh_variable_profile_table_handle variable_profile_table;
   menoh_model_handle model;
   VALUE vinput_layers;
   VALUE voutput_layers;
@@ -179,7 +178,6 @@ static menohModel *getModel(VALUE self) {
 }
 
 static void wrap_model_free(menohModel *p) {
-  menoh_delete_variable_profile_table(p->variable_profile_table);
   menoh_delete_model(p->model);
   ruby_xfree(p->input_buffs);
   ruby_xfree(p->output_buffs);
@@ -358,18 +356,22 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
     .model_data = model_data,
     .vpt_builder = vpt_builder
   };
-  getModel(self)->variable_profile_table = (menoh_variable_profile_table_handle)
+  menoh_variable_profile_table_handle variable_profile_table =
+    (menoh_variable_profile_table_handle)
     rb_ensure(build_vpt, (VALUE)&build_vpt_arg, vpt_builder_free, (VALUE)vpt_builder);
 
   // optimize
-  ERROR_CHECK(
-      menoh_model_data_optimize(model_data,
-                                getModel(self)->variable_profile_table));
+  menoh_error_code ec =
+      menoh_model_data_optimize(model_data, variable_profile_table);
+  if (ec != menoh_error_code_success)
+    menoh_delete_variable_profile_table(variable_profile_table);
+  ERROR_CHECK(ec);
 
   // get model buildler
   menoh_model_builder_handle model_builder;
-  ERROR_CHECK(menoh_make_model_builder(getModel(self)->variable_profile_table,
-                                        &model_builder));
+  ec = menoh_make_model_builder(variable_profile_table, &model_builder);
+  menoh_delete_variable_profile_table(variable_profile_table);
+  ERROR_CHECK(ec);
 
   // build model
   struct build_model_arg build_model_arg = {
@@ -439,15 +441,15 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     // get dimention of output layers
     int32_t dim_size;
     int32_t output_buffer_length = 1;
-    ERROR_CHECK(menoh_variable_profile_table_get_dims_size(
-                    getModel(self)->variable_profile_table,
+    ERROR_CHECK(menoh_model_get_variable_dims_size(
+                    getModel(self)->model,
                     StringValueCStr(voutput_layer), &(dim_size)));
     VALUE vresult_shape = rb_ary_new();
     // get each size of dimention
     for (int32_t dim = 0; dim < dim_size; dim++) {
       int32_t size;
-      ERROR_CHECK(menoh_variable_profile_table_get_dims_at(
-                      getModel(self)->variable_profile_table,
+      ERROR_CHECK(menoh_model_get_variable_dims_at(
+                      getModel(self)->model,
                       StringValueCStr(voutput_layer), dim, &(size)));
       rb_ary_push(vresult_shape, INT2NUM(size));
       output_buffer_length *= size;
