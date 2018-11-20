@@ -108,6 +108,29 @@ static void error_check(menoh_error_code ec) {
 
 #define ERROR_CHECK(statement) error_check(statement)
 
+static ID id_float;
+static ID id_float16, id_float32, id_float64;
+static ID id_int8, id_int16, id_int32, id_int64;
+
+static menoh_dtype
+get_dtype(VALUE val) {
+  if (NIL_P(val)) return menoh_dtype_float;
+
+  if (val == ID2SYM(id_float)) return menoh_dtype_float;
+#ifdef HAVE_CONST_MENOH_DTYPE_FLOAT64
+  if (val == ID2SYM(id_float16)) return menoh_dtype_float16;
+  if (val == ID2SYM(id_float32)) return menoh_dtype_float32;
+  if (val == ID2SYM(id_float64)) return menoh_dtype_float64;
+  if (val == ID2SYM(id_int8))  return menoh_dtype_int8;
+  if (val == ID2SYM(id_int16)) return menoh_dtype_int16;
+  if (val == ID2SYM(id_int32)) return menoh_dtype_int32;
+  if (val == ID2SYM(id_int64)) return menoh_dtype_int64;
+#endif
+
+  VALUE s = rb_inspect(val);
+  rb_raise(eInvalidDType, "unknown dtype: %s", StringValueCStr(s));
+}
+
 
 typedef struct menoh_ruby {
   menoh_model_data_handle model_data;
@@ -122,7 +145,7 @@ static const rb_data_type_t menoh_ruby_data_type = {
 };
 
 static ID id_backend, id_backend_config, id_input_layers, id_output_layers;
-static ID id_data, id_dims, id_length, id_name, id_shape;
+static ID id_data, id_dims, id_dtype, id_length, id_name, id_shape;
 
 static menoh_ruby *getONNX(VALUE self) {
   menoh_ruby *p;
@@ -240,7 +263,7 @@ static VALUE build_vpt(VALUE arg) {
     ERROR_CHECK(
         menoh_variable_profile_table_builder_add_input_profile(
             vpt_builder, StringValueCStr(vname),
-            menoh_dtype_float,
+            get_dtype(rb_hash_aref(vinput_layer, ID2SYM(id_dtype))),
             dims_length,
             dims));
   }
@@ -414,10 +437,48 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
     for (int32_t j = 0; j < dims_length; j++)
       buffer_length *= NUM2INT(rb_ary_entry(vdims, j));
 
+    menoh_dtype dtype = get_dtype(rb_hash_aref(vinput_layer, ID2SYM(id_dtype)));
+
     VALUE data = rb_ary_entry(dataset, i);
-    for (int32_t j = 0; j < buffer_length; j++) {
-      ((float*)getModel(self)->input_buffs[i])[j] =
-          (float)(NUM2DBL(rb_ary_entry(data, j)));
+    void *buf = getModel(self)->input_buffs[i];
+
+    switch (dtype) {
+    case menoh_dtype_float:
+      for (int32_t j = 0; j < buffer_length; j++) {
+        ((float*)buf)[j] = (float)(NUM2DBL(rb_ary_entry(data, j)));
+      }
+      break;
+#ifdef HAVE_CONST_MENOH_DTYPE_FLOAT64
+    case menoh_dtype_float16:
+      rb_raise(eInvalidDType, "float16 is not supported yet");
+    case menoh_dtype_float64:
+      for (int32_t j = 0; j < buffer_length; j++) {
+        ((double*)buf)[j] = (double)(NUM2DBL(rb_ary_entry(data, j)));
+      }
+      break;
+    case menoh_dtype_int8:
+      for (int32_t j = 0; j < buffer_length; j++) {
+        ((int8_t*)buf)[j] = (int8_t)(NUM2INT(rb_ary_entry(data, j)));
+      }
+      break;
+    case menoh_dtype_int16:
+      for (int32_t j = 0; j < buffer_length; j++) {
+        ((int16_t*)buf)[j] = (int16_t)(NUM2INT(rb_ary_entry(data, j)));
+      }
+      break;
+    case menoh_dtype_int32:
+      for (int32_t j = 0; j < buffer_length; j++) {
+        ((int32_t*)buf)[j] = (int32_t)(NUM2INT(rb_ary_entry(data, j)));
+      }
+      break;
+    case menoh_dtype_int64:
+      for (int32_t j = 0; j < buffer_length; j++) {
+        ((int64_t*)buf)[j] = (int64_t)(NUM2LONG(rb_ary_entry(data, j)));
+      }
+      break;
+#endif
+    default:
+      rb_raise(eInvalidDType, "unknown dtype: %d", (int)dtype);
     }
   }
 
@@ -453,12 +514,50 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
       output_buffer_length *= size;
     }
 
+    menoh_dtype dtype;
+    ERROR_CHECK(menoh_model_get_variable_dtype(getModel(self)->model,
+      StringValueCStr(voutput_layer), &dtype));
+
     // Convert result to Ruby Array
+    void *buf = getModel(self)->output_buffs[output_layer_i];
     VALUE vresult_buffer = rb_ary_new();
-    for (int32_t j = 0; j < output_buffer_length; j++) {
-      float *output_buff;
-      output_buff = (float*)getModel(self)->output_buffs[output_layer_i];
-      rb_ary_push(vresult_buffer, DBL2NUM(output_buff[j]));
+    switch (dtype) {
+    case menoh_dtype_float:
+      for (int32_t j = 0; j < output_buffer_length; j++) {
+        rb_ary_push(vresult_buffer, DBL2NUM(((float*)buf)[j]));
+      }
+      break;
+#ifdef HAVE_CONST_MENOH_DTYPE_FLOAT64
+    case menoh_dtype_float16:
+      rb_raise(eInvalidDType, "float16 is not supported yet");
+    case menoh_dtype_float64:
+      for (int32_t j = 0; j < output_buffer_length; j++) {
+        rb_ary_push(vresult_buffer, DBL2NUM(((double*)buf)[j]));
+      }
+      break;
+    case menoh_dtype_int8:
+      for (int32_t j = 0; j < output_buffer_length; j++) {
+        rb_ary_push(vresult_buffer, INT2NUM(((int8_t*)buf)[j]));
+      }
+      break;
+    case menoh_dtype_int16:
+      for (int32_t j = 0; j < output_buffer_length; j++) {
+        rb_ary_push(vresult_buffer, INT2NUM(((int16_t*)buf)[j]));
+      }
+      break;
+    case menoh_dtype_int32:
+      for (int32_t j = 0; j < output_buffer_length; j++) {
+        rb_ary_push(vresult_buffer, INT2NUM(((int32_t*)buf)[j]));
+      }
+      break;
+    case menoh_dtype_int64:
+      for (int32_t j = 0; j < output_buffer_length; j++) {
+        rb_ary_push(vresult_buffer, LONG2NUM(((int64_t*)buf)[j]));
+      }
+      break;
+#endif
+    default:
+      rb_raise(eInvalidDType, "unknown dtype: %d", (int)dtype);
     }
 
     rb_hash_aset(result_each, ID2SYM(id_name), voutput_layer);
@@ -479,9 +578,19 @@ void Init_menoh_native() {
   id_output_layers = rb_intern("output_layers");
   id_data = rb_intern("data");
   id_dims = rb_intern("dims");
+  id_dtype = rb_intern("dtype");
   id_length = rb_intern("length");
   id_name = rb_intern("name");
   id_shape = rb_intern("shape");
+
+  id_float   = rb_intern("float");
+  id_float16 = rb_intern("float16");
+  id_float32 = rb_intern("float32");
+  id_float64 = rb_intern("float64");
+  id_int8    = rb_intern("int8");
+  id_int16   = rb_intern("int16");
+  id_int32   = rb_intern("int32");
+  id_int64   = rb_intern("int64");
 
   VALUE mMenoh = rb_define_module("Menoh");
 
