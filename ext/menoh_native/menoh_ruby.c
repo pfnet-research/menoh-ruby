@@ -560,23 +560,7 @@ static void *model_run(void *arg) {
   return NULL;
 }
 
-static VALUE wrap_model_run(VALUE self, VALUE dataset) {
-  VALUE vinput_layers = getModel(self)->vinput_layers;
-  VALUE voutput_layers = getModel(self)->voutput_layers;
-
-  int32_t input_layer_num =
-      NUM2INT(rb_funcall(vinput_layers, id_length, 0));
-  int32_t output_layer_num =
-      NUM2INT(rb_funcall(voutput_layers, id_length, 0));
-
-  // Copy input image data to model's input array
-  for (int32_t i = 0; i < input_layer_num; i++) {
-    VALUE vinput_layer = rb_ary_entry(vinput_layers, i);
-    VALUE vname = rb_hash_aref(vinput_layer, ID2SYM(id_name));
-    VALUE data = rb_ary_entry(dataset, i);
-    set_data(self, vname, data);
-  }
-
+static VALUE wrap_model_run(VALUE self) {
   // run model
   struct model_run_arg model_run_arg = {
     .model = getModel(self)->model,
@@ -584,24 +568,7 @@ static VALUE wrap_model_run(VALUE self, VALUE dataset) {
   };
   rb_thread_call_without_gvl(model_run, &model_run_arg, RUBY_UBF_IO, NULL);
   ERROR_CHECK(model_run_arg.err);
-
-  // Get output
-  VALUE results = rb_ary_new();
-  for (int32_t output_layer_i = 0; output_layer_i < output_layer_num;
-       output_layer_i++) {
-    VALUE voutput_layer = rb_ary_entry(voutput_layers, output_layer_i);
-    VALUE result_each = rb_hash_new();
-
-    rb_hash_aset(result_each, ID2SYM(id_name), voutput_layer);
-    rb_hash_aset(result_each, ID2SYM(id_shape),
-                 get_shape(self, voutput_layer));
-    rb_hash_aset(result_each, ID2SYM(id_data),
-                 get_data(self, voutput_layer));
-
-    rb_ary_push(results, result_each);
-  }
-
-  return results;
+  return Qnil;
 }
 
 void Init_menoh_native() {
@@ -640,7 +607,7 @@ void Init_menoh_native() {
                            RUBY_METHOD_FUNC(wrap_model_init), 2);
 
   rb_define_private_method(model, "native_run",
-                           RUBY_METHOD_FUNC(wrap_model_run), 1);
+                           RUBY_METHOD_FUNC(wrap_model_run), 0);
 
   rb_define_method(model, "set_data", RUBY_METHOD_FUNC(set_data), 2);
   rb_define_method(model, "get_data", RUBY_METHOD_FUNC(get_data), 1);
