@@ -11,5 +11,6 @@ elsif try_cflags '-std=c99'
 end
 
 if pkg_config("menoh")
+  have_const('menoh_dtype_float64', 'menoh/menoh.h')
   create_makefile('menoh/menoh_native')
 end
