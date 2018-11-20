@@ -132,6 +132,36 @@ get_dtype(VALUE val) {
 }
 
 
+static int32_t dtype_size(menoh_dtype dtype) {
+#ifdef HAVE_MENOH_DTYPE_SIZE
+    int32_t ret;
+    ERROR_CHECK(menoh_dtype_size(dtype, &ret));
+    return ret;
+#else
+    switch (dtype) {
+    case menoh_dtype_float:
+      return sizeof(float);
+#ifdef HAVE_CONST_MENOH_DTYPE_FLOAT64
+    case menoh_dtype_float64:
+      return sizeof(double);
+    case menoh_dtype_float16:
+      return sizeof(int16_t);
+    case menoh_dtype_int8:
+      return sizeof(int8_t);
+    case menoh_dtype_int16:
+      return sizeof(int16_t);
+    case menoh_dtype_int32:
+      return sizeof(int32_t);
+    case menoh_dtype_int64:
+      return sizeof(int64_t);
+#endif
+    default:
+      rb_raise(eInvalidDType, "unknown dtype: %d", (int)dtype);
+    }
+#endif
+}
+
+
 typedef struct menoh_ruby {
   menoh_model_data_handle model_data;
 } menoh_ruby;
@@ -522,6 +552,27 @@ static VALUE set_data(VALUE self, VALUE vname, VALUE data) {
 }
 
 
+static VALUE set_data_str(VALUE self, VALUE vname, VALUE data) {
+  const char *name = StringValueCStr(vname);
+  menoh_dtype dtype;
+  void *buf;
+
+  ERROR_CHECK(menoh_model_get_variable_dtype(getModel(self)->model, name, &dtype));
+  ERROR_CHECK(menoh_model_get_variable_buffer_handle(getModel(self)->model, name, &buf));
+
+  int32_t buffer_length = get_buffer_length(self, name);
+  int32_t elem_size = dtype_size(dtype);
+
+  StringValue(data);
+  if (RSTRING_LEN(data) != buffer_length * elem_size)
+      rb_raise(rb_eArgError, "wrong string length at (expected %zu, was %zu)",
+               (size_t)(buffer_length * elem_size), RSTRING_LEN(data));
+  memcpy(buf, RSTRING_PTR(data), buffer_length * elem_size);
+
+  return Qnil;
+}
+
+
 static VALUE get_data(VALUE self, VALUE vname) {
   const char *name = StringValueCStr(vname);
   menoh_dtype dtype;
@@ -574,6 +625,21 @@ static VALUE get_data(VALUE self, VALUE vname) {
 
   return vresult_buffer;
 }
+
+
+static VALUE get_data_str(VALUE self, VALUE vname) {
+  const char *name = StringValueCStr(vname);
+  menoh_dtype dtype;
+  void *buf;
+
+  ERROR_CHECK(menoh_model_get_variable_dtype(getModel(self)->model, name, &dtype));
+  ERROR_CHECK(menoh_model_get_variable_buffer_handle(getModel(self)->model, name, &buf));
+  int32_t buffer_length = get_buffer_length(self, name);
+  int32_t elem_size = dtype_size(dtype);
+
+  return rb_str_new(buf, buffer_length * elem_size);  
+}
+
 
 
 struct model_run_arg {
@@ -637,7 +703,9 @@ void Init_menoh_native() {
                            RUBY_METHOD_FUNC(wrap_model_run), 0);
 
   rb_define_method(model, "set_data", RUBY_METHOD_FUNC(set_data), 2);
+  rb_define_method(model, "set_data_str", RUBY_METHOD_FUNC(set_data_str), 2);
   rb_define_method(model, "get_data", RUBY_METHOD_FUNC(get_data), 1);
+  rb_define_method(model, "get_data_str", RUBY_METHOD_FUNC(get_data_str), 1);
   rb_define_method(model, "get_shape", RUBY_METHOD_FUNC(get_shape), 1);
   rb_define_method(model, "get_dtype", RUBY_METHOD_FUNC(get_buffer_dtype), 1);
 
