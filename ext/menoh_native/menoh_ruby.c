@@ -409,6 +409,33 @@ static VALUE wrap_model_init(VALUE self, VALUE vonnx, VALUE option) {
 }
 
 
+static VALUE get_buffer_dtype(VALUE self, VALUE name) {
+  menoh_dtype dtype;
+  ERROR_CHECK(menoh_model_get_variable_dtype(getModel(self)->model, StringValueCStr(name), &dtype));
+
+  switch (dtype) {
+  case menoh_dtype_float:
+    return ID2SYM(id_float32);
+#ifdef HAVE_CONST_MENOH_DTYPE_FLOAT64
+  case menoh_dtype_float16:
+    return ID2SYM(id_float16);
+  case menoh_dtype_float64:
+    return ID2SYM(id_float64);
+  case menoh_dtype_int8:
+    return ID2SYM(id_int8);
+  case menoh_dtype_int16:
+    return ID2SYM(id_int16);
+  case menoh_dtype_int32:
+    return ID2SYM(id_int32);
+  case menoh_dtype_int64:
+    return ID2SYM(id_int64);
+#endif
+  default:
+    rb_raise(eInvalidDType, "unknown dtype: %d", (int)dtype);
+  }
+}
+
+
 static int32_t get_buffer_length(VALUE self, const char *name) {
   int32_t dims_length;
   int32_t buffer_length = 1;
@@ -612,6 +639,7 @@ void Init_menoh_native() {
   rb_define_method(model, "set_data", RUBY_METHOD_FUNC(set_data), 2);
   rb_define_method(model, "get_data", RUBY_METHOD_FUNC(get_data), 1);
   rb_define_method(model, "get_shape", RUBY_METHOD_FUNC(get_shape), 1);
+  rb_define_method(model, "get_dtype", RUBY_METHOD_FUNC(get_buffer_dtype), 1);
 
   eError                          = rb_define_class_under(mMenoh, "Error", rb_eStandardError);
   eStdError                       = rb_define_class_under(mMenoh, "StdError", eError);
