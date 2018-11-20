@@ -12,5 +12,6 @@ end
 
 if pkg_config("menoh")
   have_const('menoh_dtype_float64', 'menoh/menoh.h')
+  have_func('menoh_dtype_size', 'menoh/menoh.h')
   create_makefile('menoh/menoh_native')
 end

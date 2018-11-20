@@ -52,27 +52,21 @@ module Menoh
       if dataset.length != @option[:input_layers].length
         raise "Invalid input num: expected==#{@option[:input_layers].length} actual==#{dataset.length}"
       end
-      dataset_for_native = []
       dataset.each do |input|
         if !input[:data].instance_of?(Array) || input[:data].empty?
           raise "Invalid dataset for layer #{input[:name]}"
         end
-        target_layer = @option[:input_layers].find { |item| item[:name] == input[:name] }
-        expected_data_length = target_layer[:dims].inject(:*)
-        if input[:data].length != expected_data_length
-          raise "Invalid data length: expected==#{expected_data_length} actual==#{input[:data].length}"
-        end
-        dataset_for_native << input[:data]
+        set_data(input[:name], input[:data])
       end
 
       # run
-      results = native_run dataset_for_native
+      native_run
 
       # reshape result
-      results.map do |raw|
-        buffer = raw[:data]
-        shape = raw[:shape]
-        raw[:data] = Util.reshape buffer, shape
+      results = @option[:output_layers].map do |name|
+        buffer = get_data(name)
+        shape = get_shape(name)
+        { name: name, shape: shape, data: Util.reshape(buffer, shape) }
       end
 
       yield results if block_given?
