@@ -642,6 +642,10 @@ void Init_menoh_native() {
   rb_define_private_method(model, "native_run",
                            RUBY_METHOD_FUNC(wrap_model_run), 1);
 
+  rb_define_method(model, "set_data", RUBY_METHOD_FUNC(set_data), 2);
+  rb_define_method(model, "get_data", RUBY_METHOD_FUNC(get_data), 1);
+  rb_define_method(model, "get_shape", RUBY_METHOD_FUNC(get_shape), 1);
+
   eError                          = rb_define_class_under(mMenoh, "Error", rb_eStandardError);
   eStdError                       = rb_define_class_under(mMenoh, "StdError", eError);
   eUnknownError                   = rb_define_class_under(mMenoh, "UnknownError", eError);
