@@ -106,14 +106,14 @@ Now we can run the inference.
 
 ```ruby
 # execute inference
-inferenced_results = model.run image_set
+inference_results = model.run image_set
 ```
 
-The `inferenced_results` is the array that contains the hash of results of `output_layers`. So you can get each value as follows.
+The `inference_results` is the array that contains the hash of results of `output_layers`. So you can get each value as follows.
 
 ```ruby
-fc6_out = inferenced_results.find { |x| x[:name] == FC6_OUT_NAME }
-softmax_out = inferenced_results.find { |x| x[:name] == SOFTMAX_OUT_NAME }
+fc6_out = inference_results.find { |x| x[:name] == FC6_OUT_NAME }
+softmax_out = inference_results.find { |x| x[:name] == SOFTMAX_OUT_NAME }
 ```
 
 That's it.
