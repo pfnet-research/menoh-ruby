@@ -57,10 +57,10 @@ Menoh::Menoh.new './data/mnist.onnx' do |onnx_obj|
       }
     ]
     # execute inference
-    model.run image_set do |inferenced_results|
+    model.run image_set do |inference_results|
       categories = (0..9).to_a
       TOP_K = 1
-      layer_result = inferenced_results.find { |x| x[:name] == MNIST_OUT_NAME }
+      layer_result = inference_results.find { |x| x[:name] == MNIST_OUT_NAME }
       layer_result[:data].zip(image_list).each do |image_result, image_filepath|
         # sort by score
         sorted_result = image_result.zip(categories).sort_by { |x| -x[0] }

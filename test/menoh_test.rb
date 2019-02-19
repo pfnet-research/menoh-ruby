@@ -32,10 +32,10 @@ class MenohTest < Minitest::Test
           data: (0..(batch_size - 1)).map { |_i| (0..(1 * 28 * 28 - 1)).to_a }.flatten
         }
       ]
-      inferenced_results = model.run imageset
-      assert_instance_of(Array, inferenced_results)
-      assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
-      assert_equal(batch_size, inferenced_results.first[:data].length)
+      inference_results = model.run imageset
+      assert_instance_of(Array, inference_results)
+      assert_equal(MNIST_OUT_NAME, inference_results.first[:name])
+      assert_equal(batch_size, inference_results.first[:data].length)
     end
   end
 
@@ -61,10 +61,10 @@ class MenohTest < Minitest::Test
       assert_instance_of(Menoh::Menoh, onnx)
       onnx.make_model(model_opt) do |model|
         assert_instance_of(Menoh::MenohModel, model)
-        model.run(imageset) do |inferenced_results|
-          assert_instance_of(Array, inferenced_results)
-          assert_equal(MNIST_OUT_NAME, inferenced_results.first[:name])
-          assert_equal(batch_size, inferenced_results.first[:data].length)
+        model.run(imageset) do |inference_results|
+          assert_instance_of(Array, inference_results)
+          assert_equal(MNIST_OUT_NAME, inference_results.first[:name])
+          assert_equal(batch_size, inference_results.first[:data].length)
         end
       end
     end

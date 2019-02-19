@@ -78,12 +78,12 @@ image_set = [
 ]
 
 # execute inference
-inferenced_results = model.run image_set
+inference_results = model.run image_set
 
 # load category definition
 categories = File.read('./data/synset_words.txt').split("\n")
 TOP_K = 5
-layer_result = inferenced_results.find { |x| x[:name] == SOFTMAX_OUT_NAME }
+layer_result = inference_results.find { |x| x[:name] == SOFTMAX_OUT_NAME }
 layer_result[:data].zip(image_list).each do |image_result, image_filepath|
   puts "=== Result for #{image_filepath} ==="
 
