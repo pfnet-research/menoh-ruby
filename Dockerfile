@@ -21,19 +21,23 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/*
 
 # MKL-DNN
+ENV MKLDNN_VERSION v0.17.4
 RUN mkdir /opt/mkl-dnn
 WORKDIR /opt/mkl-dnn
 RUN git clone https://github.com/01org/mkl-dnn.git && \
-    cd mkl-dnn/scripts && bash ./prepare_mkl.sh && cd .. && \
+    cd mkl-dnn && git checkout -b ${MKLDNN_VERSION} refs/tags/${MKLDNN_VERSION} && \
+    cd ./scripts && bash ./prepare_mkl.sh && cd .. && \
     sed -i 's/add_subdirectory(examples)//g' CMakeLists.txt && \
     sed -i 's/add_subdirectory(tests)//g' CMakeLists.txt && \
     mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX .. && make && \
     make install
 
 # Menoh
+ENV MENOH_VERSION v1.1.1
 WORKDIR /opt/
 RUN git clone https://github.com/pfnet-research/menoh.git && \
     cd menoh && \
+    git checkout -b ${MENOH_VERSION} refs/tags/${MENOH_VERSION} && \
     sed -i 's/add_subdirectory(example)//g' CMakeLists.txt && \
     sed -i 's/add_subdirectory(test)//g' CMakeLists.txt && \
     mkdir build && \
