@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/*
 
 # MKL-DNN
-ENV MKLDNN_VERSION v0.17.4
+ENV MKLDNN_VERSION v0.18.1
 RUN mkdir /opt/mkl-dnn
 WORKDIR /opt/mkl-dnn
 RUN git clone https://github.com/01org/mkl-dnn.git && \
