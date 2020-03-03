@@ -1,0 +1,38 @@
+FROM ubuntu:xenial-20180228
+
+LABEL maintainer "Kunihiko Miyoshi <miyoshik@preferred.jp>"
+LABEL OBJECT="Menoh Ruby Extension Reference Environment"
+
+ENV INSTALL_PREFIX /usr/local
+ENV LD_LIBRARY_PATH ${INSTALL_PREFIX}/lib
+
+RUN apt-get update && apt-get install -y \
+  curl \
+  git \
+  gcc \
+  g++ \
+  cmake \
+  cmake-data \
+  libopencv-dev \
+  protobuf-compiler \
+  libprotobuf-dev \
+  ruby-dev \
+  ruby-rmagick \
+  ruby-bundler
+
+RUN mkdir -p /opt
+# MKL-DNN & Menoh
+WORKDIR /opt
+RUN curl -LO https://github.com/pfnet-research/menoh/releases/download/v1.1.0/ubuntu1604_mkl-dnn_0.16-1_amd64.deb
+RUN curl -LO https://github.com/pfnet-research/menoh/releases/download/v1.1.0/ubuntu1604_menoh_1.1.0-1_amd64.deb
+RUN curl -LO https://github.com/pfnet-research/menoh/releases/download/v1.1.0/ubuntu1604_menoh-dev_1.1.0-1_amd64.deb
+RUN apt update
+RUN dpkg -i --force-depends *.deb
+RUN rm -rf /var/lib/apt/lists/*
+
+# menoh-ruby
+RUN gem install rake-compiler
+RUN mkdir /opt/menoh-ruby
+ADD . /opt/menoh-ruby
+WORKDIR /opt/menoh-ruby
+RUN rake && rake install
