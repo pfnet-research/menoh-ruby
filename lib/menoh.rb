@@ -1,6 +1,7 @@
 require 'menoh/version'
 require 'menoh/menoh_native'
 require 'json'
+require 'numo/narray'
 
 module Menoh
   class Menoh
@@ -20,6 +21,16 @@ module Menoh
   end
 
   class MenohModel
+    DTYPE_TO_NUMO_NARRAY_CLASS = {
+      float: Numo::SFloat,
+      float32: Numo::SFloat,
+      float64: Numo::DFloat,
+      int8: Numo::Int8,
+      int16: Numo::Int16,
+      int32: Numo::Int32,
+      int64: Numo::Int64,
+    }
+    
     def initialize(menoh, option)
       if option[:input_layers].nil? || option[:input_layers].empty?
         raise "Required ':input_layers'"
@@ -67,6 +78,30 @@ module Menoh
         buffer = get_data(name)
         shape = get_shape(name)
         { name: name, shape: shape, data: Util.reshape(buffer, shape) }
+      end
+
+      yield results if block_given?
+      results
+    end
+
+    def run_numo(dataset)      
+      raise 'Invalid dataset' if !dataset.instance_of?(Array) || dataset.empty?
+      if dataset.length != @option[:input_layers].length
+        raise "Invalid input num: expected==#{@option[:input_layers].length} actual==#{dataset.length}"
+      end
+      dataset.each do |input|
+        set_data_str(input[:name], input[:data].to_binary)
+      end
+
+      # run
+      native_run
+
+      results = {}
+      @option[:output_layers].each do |name|
+        dtype = get_dtype(name)
+        c = DTYPE_TO_NUMO_NARRAY_CLASS[dtype]
+        raise InvalidDTypeError.new("unsupported dtype: #{dtype}") if c.nil?
+        results[name] = c.from_binary(get_data_str(name), get_shape(name))
       end
 
       yield results if block_given?

@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'pry'
   spec.add_development_dependency 'rake', '>= 12.3.3'
   spec.add_development_dependency 'rake-compiler'
+  spec.add_development_dependency 'numo-narray'
 end
